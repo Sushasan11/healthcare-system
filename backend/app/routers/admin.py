@@ -57,6 +57,17 @@ async def approve_application(
     return user
 
 
+@router.get("/users", response_model=list[UserAdminOut])
+async def list_users(
+    db: AsyncSession = Depends(get_db),
+):
+    """List all users ordered by registration date (newest first). No PHI returned."""
+    result = await db.execute(
+        select(User).order_by(User.created_at.desc())
+    )
+    return result.scalars().all()
+
+
 @router.post("/applications/{user_id}/reject", response_model=UserAdminOut)
 async def reject_application(
     user_id: int,
