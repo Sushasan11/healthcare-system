@@ -23,8 +23,9 @@ export async function apiFetch(
     credentials: "include", // send cookies (refresh token)
   });
 
-  // If 401 and we had a token, try refresh
-  if (response.status === 401 && token) {
+  // If 401, try refresh (even when token is null — cookie may still be valid)
+  // Guard: skip retry for the refresh endpoint itself to prevent infinite loop
+  if (response.status === 401 && !path.includes("/auth/refresh")) {
     const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
       method: "POST",
       credentials: "include",
