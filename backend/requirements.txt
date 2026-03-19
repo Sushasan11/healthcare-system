@@ -1,0 +1,17 @@
+fastapi[all]==0.135.1
+sqlalchemy[asyncio]
+asyncpg
+alembic
+pyjwt[crypto]
+pwdlib[argon2]
+cryptography
+redis
+slowapi
+fastapi-mail
+python-dotenv
+pytest
+pytest-asyncio
+httpx
+psycopg2-binary
+aiosqlite
+fakeredis[aioredis]
