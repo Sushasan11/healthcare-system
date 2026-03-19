@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     FIRST_ADMIN_EMAIL: str = "admin@healthconnect.local"
     FIRST_ADMIN_PASSWORD: str = "Admin@1234"
     BACKEND_CORS_ORIGINS: str = "http://localhost:3000"
+    FRONTEND_URL: str = "http://localhost:3000"
 
 
 settings = Settings()

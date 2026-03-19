@@ -26,11 +26,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routers — included in Plan 03 (auth endpoints)
-# from app.routers import auth, admin, profile
-# app.include_router(auth.router)
-# app.include_router(admin.router)
-# app.include_router(profile.router)
+# Routers
+from app.routers import auth, admin, profile  # noqa: E402
+
+app.include_router(auth.router)
+app.include_router(admin.router)
+app.include_router(profile.router)
 
 
 @app.get("/health")
