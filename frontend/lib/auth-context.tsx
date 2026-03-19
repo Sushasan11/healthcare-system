@@ -70,7 +70,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refreshUser();
+    const restoreSession = async () => {
+      // Always try to restore session from HttpOnly refresh cookie first.
+      // After browser refresh, in-memory token is null but cookie persists.
+      try {
+        const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
+          method: "POST",
+          credentials: "include",
+        });
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          setAccessToken(data.access_token);
+          const parsed = parseToken(data.access_token);
+          if (parsed) {
+            setAuthSessionCookie(parsed.role);
+          }
+        }
+      } catch {
+        // Refresh failed (no cookie, expired, network error) — proceed without token
+      }
+      // Now refreshUser() will find the restored token (or null if refresh failed)
+      await refreshUser();
+    };
+    restoreSession();
   }, [refreshUser]);
 
   const login = async (email: string, password: string) => {
