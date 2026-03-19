@@ -19,6 +19,7 @@ interface TopBarProps {
   userName: string;
   userRole: string;
   onToggleSidebar: () => void;
+  onLogout?: () => void | Promise<void>;
 }
 
 function getInitials(name: string): string {
@@ -30,10 +31,14 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function TopBar({ userName, userRole, onToggleSidebar }: TopBarProps) {
+export function TopBar({ userName, userRole, onToggleSidebar, onLogout }: TopBarProps) {
   const router = useRouter();
 
   async function handleSignOut() {
+    if (onLogout) {
+      await onLogout();
+      return;
+    }
     try {
       await apiFetch("/auth/logout", { method: "POST" });
     } catch {
