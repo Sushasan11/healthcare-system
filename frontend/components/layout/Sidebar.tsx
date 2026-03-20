@@ -11,6 +11,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  Search,
+  Calendar,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -36,10 +39,14 @@ interface MenuItem {
 const MENU_ITEMS: Record<Role, MenuItem[]> = {
   patient: [
     { label: "Dashboard", href: "/patient/dashboard", icon: LayoutDashboard },
+    { label: "Find Doctors", href: "/patient/doctors", icon: Search },
+    { label: "My Appointments", href: "/patient/appointments", icon: Calendar },
     { label: "Profile", href: "/patient/profile", icon: User },
   ],
   doctor: [
     { label: "Dashboard", href: "/doctor/dashboard", icon: LayoutDashboard },
+    { label: "Appointments", href: "/doctor/appointments", icon: Calendar },
+    { label: "My Schedule", href: "/doctor/schedule", icon: Clock },
     { label: "Profile", href: "/doctor/profile", icon: User },
   ],
   pharmacist: [
