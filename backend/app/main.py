@@ -27,7 +27,7 @@ app.add_middleware(
 )
 
 # Routers
-from app.routers import auth, admin, profile, doctors, availability, appointments  # noqa: E402
+from app.routers import auth, admin, profile, doctors, availability, appointments, consultations, ws  # noqa: E402
 
 app.include_router(auth.router)
 app.include_router(admin.router)
@@ -35,6 +35,9 @@ app.include_router(profile.router)
 app.include_router(doctors.router)
 app.include_router(availability.router)
 app.include_router(appointments.router)
+app.include_router(consultations.router)
+app.include_router(consultations.files_router)
+app.include_router(ws.router)
 
 
 @app.get("/health")
