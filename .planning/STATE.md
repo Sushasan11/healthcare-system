@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 03-06-PLAN.md
-last_updated: "2026-03-20T16:37:34.642Z"
+stopped_at: Completed 04-prescriptions-04-01-PLAN.md
+last_updated: "2026-03-20T18:48:36.102Z"
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 18
-  completed_plans: 18
+  total_plans: 22
+  completed_plans: 19
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** A patient can discover a doctor, book an appointment, have a real-time consultation (chat → call → video escalation), receive a prescription, and buy medicines — all in one seamless flow.
-**Current focus:** Phase 03 — real-time-consultation
+**Current focus:** Phase 04 — prescriptions
 
 ## Current Position
 
-Phase: 03 (real-time-consultation) — EXECUTING
-Plan: 1 of 7
+Phase: 04 (prescriptions) — EXECUTING
+Plan: 2 of 4
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Plan: 1 of 7
 | Phase 03-real-time-consultation P04a | 15 min | 1 tasks | 8 files |
 | Phase 03-real-time-consultation P04b | 10 min | 2 tasks | 6 files |
 | Phase 03-real-time-consultation PP06 | 2 min | 2 tasks | 2 files |
+| Phase 04-prescriptions P01 | 18 | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,9 @@ Recent decisions affecting current work:
 - [Phase 03-real-time-consultation]: CallControls camera button only rendered when callMedia === 'video' — not shown for audio-only calls per UI-SPEC
 - [Phase 03-04b]: webrtcHandlerRef pattern: store handleSignalingMessage in useRef to break circular dependency between onMessage callback and useWebRTC — avoids dual socket connections
 - [Phase 03-04b]: CallModal shown for patient with open={isRinging} — Dialog shows/hides based on callState without conditional rendering
+- [Phase 04-prescriptions]: Prescription model uses explicit foreign_keys=[doctor_id] and foreign_keys=[patient_id] on relationships to avoid AmbiguousForeignKeysError
+- [Phase 04-prescriptions]: All PrescriptionItem PHI fields use EncryptedString (AES-256-GCM): medicine_name, dosage_amount, dosage_unit, frequency, duration, instructions
+- [Phase 04-prescriptions]: HMAC sorts items by medicine_name for deterministic digest; reportlab 4.4.10 used for PDF generation from dict data
 
 ### Pending Todos
 
@@ -119,6 +123,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T16:37:34.637Z
-Stopped at: Completed 03-06-PLAN.md
+Last session: 2026-03-20T18:48:36.094Z
+Stopped at: Completed 04-prescriptions-04-01-PLAN.md
 Resume file: None
