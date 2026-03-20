@@ -71,3 +71,60 @@ async def async_client(db_session):
         yield client
 
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def test_consultation(db_session, async_client):
+    """Create a doctor, patient, appointment, and consultation for testing.
+    Returns dict with user objects and consultation ID."""
+    import uuid
+    from app.core.security import hash_password
+
+    # Create doctor user
+    from app.models.user import User, UserRole, AccountStatus
+    from app.models.appointment import Appointment, AppointmentStatus
+    from app.models.consultation import Consultation, ConsultationStatus
+    from datetime import datetime, timezone, timedelta
+
+    # Use unique emails per fixture call to avoid UNIQUE constraint violations
+    uid = uuid.uuid4().hex[:8]
+    doctor = User(
+        email=f"doc_{uid}@test.dev",
+        full_name="Dr. Test",
+        hashed_password=hash_password("TestPass1!"),
+        role=UserRole.doctor,
+        account_status=AccountStatus.active,
+    )
+    patient = User(
+        email=f"patient_{uid}@test.dev",
+        full_name="Patient Test",
+        hashed_password=hash_password("TestPass1!"),
+        role=UserRole.patient,
+        account_status=AccountStatus.active,
+    )
+    db_session.add_all([doctor, patient])
+    await db_session.flush()
+
+    appointment = Appointment(
+        patient_id=patient.id,
+        doctor_id=doctor.id,
+        slot_datetime=datetime.now(timezone.utc) + timedelta(minutes=5),
+        status=AppointmentStatus.confirmed,
+    )
+    db_session.add(appointment)
+    await db_session.flush()
+
+    consultation = Consultation(
+        appointment_id=appointment.id,
+        status=ConsultationStatus.active,
+    )
+    db_session.add(consultation)
+    await db_session.commit()
+    await db_session.refresh(consultation)
+
+    return {
+        "doctor": doctor,
+        "patient": patient,
+        "appointment": appointment,
+        "consultation": consultation,
+    }
