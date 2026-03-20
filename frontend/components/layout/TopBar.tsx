@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Bell, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { apiFetch } from "@/lib/api";
+import { NotificationPanel } from "@/components/notifications/NotificationPanel";
 import { clearAccessToken, clearAuthSessionCookie } from "@/lib/auth";
 
 interface TopBarProps {
@@ -71,16 +72,8 @@ export function TopBar({ userName, userRole, onToggleSidebar, onLogout }: TopBar
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Notification bell — placeholder */}
-      <button
-        aria-label="Notifications (coming soon)"
-        className={cn(
-          "flex items-center justify-center rounded-md transition-colors",
-          "min-w-[44px] min-h-[44px] text-[#64748B]"
-        )}
-      >
-        <Bell className="size-5" />
-      </button>
+      {/* Notification panel */}
+      <NotificationPanel />
 
       {/* User dropdown */}
       <DropdownMenu>
