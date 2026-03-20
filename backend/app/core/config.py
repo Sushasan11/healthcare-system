@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     FIRST_ADMIN_PASSWORD: str = "Admin@1234"
     BACKEND_CORS_ORIGINS: str = "http://localhost:3000"
     FRONTEND_URL: str = "http://localhost:3000"
+    PRESCRIPTION_HMAC_KEY: str = "default-dev-key-change-in-prod"
 
 
 settings = Settings()

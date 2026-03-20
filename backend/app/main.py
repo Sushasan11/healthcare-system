@@ -7,8 +7,8 @@ from slowapi.util import get_remote_address
 from app.core.config import settings
 from app.db import lifespan
 
-# Rate limiter backed by Redis
-limiter = Limiter(key_func=get_remote_address, storage_uri=settings.REDIS_URL)
+# Rate limiter backed by in-memory storage
+limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
 
 app = FastAPI(title="HealthConnect", lifespan=lifespan)
 
@@ -27,7 +27,7 @@ app.add_middleware(
 )
 
 # Routers
-from app.routers import auth, admin, profile, doctors, availability, appointments, consultations, ws  # noqa: E402
+from app.routers import auth, admin, profile, doctors, availability, appointments, consultations, ws, prescriptions, drugs, notifications  # noqa: E402
 
 app.include_router(auth.router)
 app.include_router(admin.router)
@@ -38,6 +38,9 @@ app.include_router(appointments.router)
 app.include_router(consultations.router)
 app.include_router(consultations.files_router)
 app.include_router(ws.router)
+app.include_router(prescriptions.router)
+app.include_router(drugs.router)
+app.include_router(notifications.router)
 
 
 @app.get("/health")

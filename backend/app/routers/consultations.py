@@ -11,6 +11,7 @@ Endpoints:
 """
 
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 import aiofiles
@@ -24,6 +25,7 @@ from app.core.deps import get_current_user, require_role
 from app.db import get_db
 from app.models.appointment import Appointment, AppointmentStatus
 from app.models.consultation import Consultation, ConsultationStatus, Message
+from app.models.notification import Notification, NotificationType
 from app.models.user import User, UserRole
 from app.schemas.consultation import (
     ConsultationCreate,
@@ -102,7 +104,7 @@ async def _get_consultation_as_participant(
 # ---------------------------------------------------------------------------
 
 
-@router.post("", response_model=ConsultationOut, status_code=status.HTTP_200_OK)
+@router.post("", response_model=ConsultationOut, status_code=status.HTTP_201_CREATED)
 async def create_consultation(
     data: ConsultationCreate,
     current_user: User = Depends(get_current_user),
@@ -240,8 +242,6 @@ async def end_consultation(
     db: AsyncSession = Depends(get_db),
 ):
     """End a consultation. Doctor only."""
-    from datetime import datetime, timezone
-
     consultation = await _get_consultation_as_participant(consultation_id, current_user, db)
 
     consultation.status = ConsultationStatus.completed
@@ -265,6 +265,70 @@ async def end_consultation(
     )
     consultation = result.scalar_one()
     return _build_consultation_out(consultation)
+
+
+GRACE_PERIOD_MINUTES = 30
+
+
+@router.post("/{consultation_id}/reopen", response_model=ConsultationOut)
+async def reopen_consultation(
+    consultation_id: int,
+    current_user: User = Depends(require_role("doctor")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reopen a completed consultation within the grace period (doctor only)."""
+    result = await db.execute(
+        select(Consultation)
+        .options(selectinload(Consultation.appointment))
+        .where(Consultation.id == consultation_id)
+    )
+    consultation = result.scalar_one_or_none()
+    if not consultation:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Consultation not found")
+
+    # Verify doctor is participant
+    if consultation.appointment.doctor_id != current_user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not your consultation")
+
+    if consultation.status != ConsultationStatus.completed:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Consultation is not completed")
+
+    if not consultation.ended_at:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Consultation has no end time")
+
+    ended_at_utc = (
+        consultation.ended_at.replace(tzinfo=timezone.utc)
+        if consultation.ended_at.tzinfo is None
+        else consultation.ended_at
+    )
+    elapsed = (datetime.now(timezone.utc) - ended_at_utc).total_seconds()
+    if elapsed > GRACE_PERIOD_MINUTES * 60:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Grace period has expired")
+
+    consultation.status = ConsultationStatus.active
+    consultation.ended_at = None
+
+    # Notify patient
+    patient_id = consultation.appointment.patient_id
+    notif = Notification(
+        user_id=patient_id,
+        type=NotificationType.consultation_reopened,
+        title="Consultation Reopened",
+        body=f"Dr. {current_user.full_name} has reopened the consultation.",
+        link=f"/patient/consultations/{consultation_id}",
+    )
+    db.add(notif)
+
+    await db.commit()
+    await db.refresh(consultation)
+
+    return ConsultationOut(
+        id=consultation.id,
+        appointment_id=consultation.appointment_id,
+        status=consultation.status.value,
+        started_at=consultation.started_at,
+        ended_at=consultation.ended_at,
+    )
 
 
 @router.post("/{consultation_id}/files", response_model=FileUploadOut)

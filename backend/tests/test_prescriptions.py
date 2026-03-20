@@ -5,99 +5,127 @@ then test prescription CRUD, access control, HMAC, PDF, and notifications.
 """
 import uuid
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
-# --- Fixtures ---
-
-
-@pytest.fixture
-def doctor_email():
-    return f"rx_doctor_{uuid.uuid4().hex[:8]}@test.dev"
-
-
-@pytest.fixture
-def patient_email():
-    return f"rx_patient_{uuid.uuid4().hex[:8]}@test.dev"
+from app.core.security import create_access_token, hash_password
+from app.models.user import User, UserRole, AccountStatus
+from app.models.appointment import Appointment, AppointmentStatus
+from app.models.consultation import Consultation, ConsultationStatus
 
 
-@pytest.fixture
-def patient2_email():
-    return f"rx_patient2_{uuid.uuid4().hex[:8]}@test.dev"
+# ---------------------------------------------------------------------------
+# Helper
+# ---------------------------------------------------------------------------
 
 
-async def _register_and_activate(client: AsyncClient, email: str, role: str, full_name: str) -> dict:
-    """Register user, manually activate, login, return headers."""
-    reg = await client.post("/auth/register", json={
-        "email": email,
-        "password": "TestPass123!",
-        "full_name": full_name,
-        "role": role,
-    })
-    assert reg.status_code == 201, reg.text
-    # Activate by verifying email and approving if needed
-    await client.post("/auth/verify-email", json={"email": email, "code": "000000"})
-    # For doctor: approve
-    if role == "doctor":
-        # Login as admin to approve
-        admin_email = f"rx_admin_{uuid.uuid4().hex[:8]}@test.dev"
-        await client.post("/auth/register", json={"email": admin_email, "password": "TestPass123!", "full_name": "Admin", "role": "admin"})
-        await client.post("/auth/verify-email", json={"email": admin_email, "code": "000000"})
-        admin_login = await client.post("/auth/login", data={"username": admin_email, "password": "TestPass123!"})
-        admin_token = admin_login.json()["access_token"]
-        # Get user list and approve
-        users = await client.get("/admin/users", headers={"Authorization": f"Bearer {admin_token}"})
-        for u in users.json():
-            if u["email"] == email:
-                await client.patch(f"/admin/users/{u['id']}/approve", headers={"Authorization": f"Bearer {admin_token}"})
-                break
-
-    login = await client.post("/auth/login", data={"username": email, "password": "TestPass123!"})
-    assert login.status_code == 200, login.text
-    token = login.json()["access_token"]
+def make_headers(user_id: int, role: str) -> dict:
+    token = create_access_token(sub=str(user_id), role=role)
     return {"Authorization": f"Bearer {token}"}
 
 
-@pytest.fixture
-async def doctor_headers(async_client: AsyncClient, doctor_email: str):
-    return await _register_and_activate(async_client, doctor_email, "doctor", "Dr. Test Prescriber")
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
 
 
-@pytest.fixture
-async def patient_headers(async_client: AsyncClient, patient_email: str):
-    return await _register_and_activate(async_client, patient_email, "patient", "Test Patient Rx")
+@pytest_asyncio.fixture
+async def rx_doctor(db_session: AsyncSession):
+    uid = uuid.uuid4().hex[:8]
+    doctor = User(
+        email=f"rx_doc_{uid}@test.dev",
+        full_name="Dr. Test Prescriber",
+        hashed_password=hash_password("TestPass123!"),
+        role=UserRole.doctor,
+        account_status=AccountStatus.active,
+        email_verified=True,
+    )
+    db_session.add(doctor)
+    await db_session.flush()
+    await db_session.refresh(doctor)
+    return doctor
 
 
-@pytest.fixture
-async def patient2_headers(async_client: AsyncClient, patient2_email: str):
-    return await _register_and_activate(async_client, patient2_email, "patient", "Other Patient Rx")
+@pytest_asyncio.fixture
+async def rx_patient(db_session: AsyncSession):
+    uid = uuid.uuid4().hex[:8]
+    patient = User(
+        email=f"rx_pat_{uid}@test.dev",
+        full_name="Test Patient Rx",
+        hashed_password=hash_password("TestPass123!"),
+        role=UserRole.patient,
+        account_status=AccountStatus.active,
+        email_verified=True,
+    )
+    db_session.add(patient)
+    await db_session.flush()
+    await db_session.refresh(patient)
+    return patient
 
 
-@pytest.fixture
-async def consultation_id(async_client: AsyncClient, doctor_headers: dict, patient_headers: dict):
+@pytest_asyncio.fixture
+async def rx_patient2(db_session: AsyncSession):
+    uid = uuid.uuid4().hex[:8]
+    patient2 = User(
+        email=f"rx_pat2_{uid}@test.dev",
+        full_name="Other Patient Rx",
+        hashed_password=hash_password("TestPass123!"),
+        role=UserRole.patient,
+        account_status=AccountStatus.active,
+        email_verified=True,
+    )
+    db_session.add(patient2)
+    await db_session.flush()
+    await db_session.refresh(patient2)
+    return patient2
+
+
+@pytest_asyncio.fixture
+async def rx_admin(db_session: AsyncSession):
+    uid = uuid.uuid4().hex[:8]
+    admin = User(
+        email=f"rx_admin_{uid}@test.dev",
+        full_name="Admin Rx",
+        hashed_password=hash_password("TestPass123!"),
+        role=UserRole.admin,
+        account_status=AccountStatus.active,
+        email_verified=True,
+    )
+    db_session.add(admin)
+    await db_session.flush()
+    await db_session.refresh(admin)
+    return admin
+
+
+@pytest_asyncio.fixture
+async def consultation_id(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+    rx_doctor: User,
+    rx_patient: User,
+):
     """Create appointment + consultation, return consultation ID."""
-    # Get doctor user ID from /auth/me
-    me = await async_client.get("/auth/me", headers=doctor_headers)
-    doctor_id = me.json()["id"]
-
-    # Create availability slot for doctor
     from datetime import datetime, timedelta, timezone
-    slot_time = datetime.now(timezone.utc) + timedelta(hours=1)
-    slot_iso = slot_time.isoformat()
 
-    appt = await async_client.post("/appointments", json={
-        "doctor_id": doctor_id,
-        "slot_datetime": slot_iso,
-        "reason": "Test consultation for prescription",
-    }, headers=patient_headers)
-    assert appt.status_code == 201, appt.text
-    appointment_id = appt.json()["id"]
+    appointment = Appointment(
+        patient_id=rx_patient.id,
+        doctor_id=rx_doctor.id,
+        slot_datetime=datetime.now(timezone.utc) + timedelta(hours=1),
+        status=AppointmentStatus.confirmed,
+    )
+    db_session.add(appointment)
+    await db_session.flush()
 
-    # Create consultation
-    consult = await async_client.post("/consultations", json={
-        "appointment_id": appointment_id,
-    }, headers=doctor_headers)
-    assert consult.status_code == 201, consult.text
-    return consult.json()["id"]
+    consultation = Consultation(
+        appointment_id=appointment.id,
+        status=ConsultationStatus.active,
+    )
+    db_session.add(consultation)
+    await db_session.commit()
+    await db_session.refresh(consultation)
+    return consultation.id
 
 
 VALID_PRESCRIPTION = {
@@ -126,10 +154,14 @@ VALID_PRESCRIPTION = {
 
 
 @pytest.mark.asyncio
-async def test_create_prescription(async_client: AsyncClient, doctor_headers, consultation_id):
+async def test_create_prescription(async_client: AsyncClient, rx_doctor, consultation_id):
     """Doctor can create prescription for active consultation."""
     payload = {**VALID_PRESCRIPTION, "consultation_id": consultation_id}
-    res = await async_client.post("/prescriptions", json=payload, headers=doctor_headers)
+    res = await async_client.post(
+        "/prescriptions",
+        json=payload,
+        headers=make_headers(rx_doctor.id, "doctor"),
+    )
     assert res.status_code == 201, res.text
     data = res.json()
     assert data["consultation_id"] == consultation_id
@@ -138,26 +170,38 @@ async def test_create_prescription(async_client: AsyncClient, doctor_headers, co
 
 
 @pytest.mark.asyncio
-async def test_create_prescription_patient_forbidden(async_client: AsyncClient, patient_headers, consultation_id):
+async def test_create_prescription_patient_forbidden(async_client: AsyncClient, rx_patient, consultation_id):
     """Patient cannot create prescriptions."""
     payload = {**VALID_PRESCRIPTION, "consultation_id": consultation_id}
-    res = await async_client.post("/prescriptions", json=payload, headers=patient_headers)
+    res = await async_client.post(
+        "/prescriptions",
+        json=payload,
+        headers=make_headers(rx_patient.id, "patient"),
+    )
     assert res.status_code in (401, 403)
 
 
 @pytest.mark.asyncio
-async def test_create_prescription_diagnosis_too_short(async_client: AsyncClient, doctor_headers, consultation_id):
+async def test_create_prescription_diagnosis_too_short(async_client: AsyncClient, rx_doctor, consultation_id):
     """Diagnosis under 10 chars is rejected."""
     payload = {"consultation_id": consultation_id, "diagnosis": "Short", "items": VALID_PRESCRIPTION["items"]}
-    res = await async_client.post("/prescriptions", json=payload, headers=doctor_headers)
+    res = await async_client.post(
+        "/prescriptions",
+        json=payload,
+        headers=make_headers(rx_doctor.id, "doctor"),
+    )
     assert res.status_code == 422
 
 
 @pytest.mark.asyncio
-async def test_create_prescription_no_items(async_client: AsyncClient, doctor_headers, consultation_id):
+async def test_create_prescription_no_items(async_client: AsyncClient, rx_doctor, consultation_id):
     """Empty items list is rejected."""
     payload = {"consultation_id": consultation_id, "diagnosis": "Valid diagnosis text here", "items": []}
-    res = await async_client.post("/prescriptions", json=payload, headers=doctor_headers)
+    res = await async_client.post(
+        "/prescriptions",
+        json=payload,
+        headers=make_headers(rx_doctor.id, "doctor"),
+    )
     assert res.status_code == 422
 
 
@@ -165,13 +209,20 @@ async def test_create_prescription_no_items(async_client: AsyncClient, doctor_he
 
 
 @pytest.mark.asyncio
-async def test_prescription_hmac_stored(async_client: AsyncClient, doctor_headers, consultation_id):
+async def test_prescription_hmac_stored(async_client: AsyncClient, rx_doctor, consultation_id):
     """Created prescription has a non-empty hmac_token (verified via detail endpoint)."""
     payload = {**VALID_PRESCRIPTION, "consultation_id": consultation_id}
-    res = await async_client.post("/prescriptions", json=payload, headers=doctor_headers)
+    res = await async_client.post(
+        "/prescriptions",
+        json=payload,
+        headers=make_headers(rx_doctor.id, "doctor"),
+    )
     assert res.status_code == 201
     rx_id = res.json()["id"]
-    detail = await async_client.get(f"/prescriptions/{rx_id}", headers=doctor_headers)
+    detail = await async_client.get(
+        f"/prescriptions/{rx_id}",
+        headers=make_headers(rx_doctor.id, "doctor"),
+    )
     assert detail.status_code == 200
     # HMAC is not exposed in response — but prescription was created without error,
     # confirming HMAC computation succeeded. Backend can verify internally.
@@ -181,13 +232,17 @@ async def test_prescription_hmac_stored(async_client: AsyncClient, doctor_header
 
 
 @pytest.mark.asyncio
-async def test_list_prescriptions_patient(async_client: AsyncClient, doctor_headers, patient_headers, consultation_id):
+async def test_list_prescriptions_patient(async_client: AsyncClient, rx_doctor, rx_patient, consultation_id):
     """Patient can list their own prescriptions."""
     # Create a prescription first
     payload = {**VALID_PRESCRIPTION, "consultation_id": consultation_id}
-    await async_client.post("/prescriptions", json=payload, headers=doctor_headers)
+    await async_client.post(
+        "/prescriptions",
+        json=payload,
+        headers=make_headers(rx_doctor.id, "doctor"),
+    )
 
-    res = await async_client.get("/prescriptions", headers=patient_headers)
+    res = await async_client.get("/prescriptions", headers=make_headers(rx_patient.id, "patient"))
     assert res.status_code == 200
     data = res.json()
     assert len(data) >= 1
@@ -195,35 +250,55 @@ async def test_list_prescriptions_patient(async_client: AsyncClient, doctor_head
 
 
 @pytest.mark.asyncio
-async def test_list_prescriptions_doctor(async_client: AsyncClient, doctor_headers, consultation_id):
+async def test_list_prescriptions_doctor(async_client: AsyncClient, rx_doctor, consultation_id):
     """Doctor can list their issued prescriptions."""
     payload = {**VALID_PRESCRIPTION, "consultation_id": consultation_id}
-    await async_client.post("/prescriptions", json=payload, headers=doctor_headers)
+    await async_client.post(
+        "/prescriptions",
+        json=payload,
+        headers=make_headers(rx_doctor.id, "doctor"),
+    )
 
-    res = await async_client.get("/prescriptions", headers=doctor_headers)
+    res = await async_client.get("/prescriptions", headers=make_headers(rx_doctor.id, "doctor"))
     assert res.status_code == 200
     assert len(res.json()) >= 1
 
 
 @pytest.mark.asyncio
-async def test_prescription_access_other_patient(async_client: AsyncClient, doctor_headers, patient2_headers, consultation_id):
+async def test_prescription_access_other_patient(
+    async_client: AsyncClient, rx_doctor, rx_patient2, consultation_id
+):
     """Another patient cannot see prescriptions they are not part of."""
     payload = {**VALID_PRESCRIPTION, "consultation_id": consultation_id}
-    create_res = await async_client.post("/prescriptions", json=payload, headers=doctor_headers)
+    create_res = await async_client.post(
+        "/prescriptions",
+        json=payload,
+        headers=make_headers(rx_doctor.id, "doctor"),
+    )
     rx_id = create_res.json()["id"]
 
-    res = await async_client.get(f"/prescriptions/{rx_id}", headers=patient2_headers)
+    res = await async_client.get(
+        f"/prescriptions/{rx_id}",
+        headers=make_headers(rx_patient2.id, "patient"),
+    )
     assert res.status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_prescription_detail_has_items(async_client: AsyncClient, doctor_headers, consultation_id):
+async def test_prescription_detail_has_items(async_client: AsyncClient, rx_doctor, consultation_id):
     """Prescription detail includes full medicine items."""
     payload = {**VALID_PRESCRIPTION, "consultation_id": consultation_id}
-    create_res = await async_client.post("/prescriptions", json=payload, headers=doctor_headers)
+    create_res = await async_client.post(
+        "/prescriptions",
+        json=payload,
+        headers=make_headers(rx_doctor.id, "doctor"),
+    )
     rx_id = create_res.json()["id"]
 
-    detail = await async_client.get(f"/prescriptions/{rx_id}", headers=doctor_headers)
+    detail = await async_client.get(
+        f"/prescriptions/{rx_id}",
+        headers=make_headers(rx_doctor.id, "doctor"),
+    )
     assert detail.status_code == 200
     data = detail.json()
     assert len(data["items"]) == 2
@@ -231,13 +306,20 @@ async def test_prescription_detail_has_items(async_client: AsyncClient, doctor_h
 
 
 @pytest.mark.asyncio
-async def test_prescription_pdf_download(async_client: AsyncClient, doctor_headers, consultation_id):
+async def test_prescription_pdf_download(async_client: AsyncClient, rx_doctor, consultation_id):
     """PDF endpoint returns application/pdf content."""
     payload = {**VALID_PRESCRIPTION, "consultation_id": consultation_id}
-    create_res = await async_client.post("/prescriptions", json=payload, headers=doctor_headers)
+    create_res = await async_client.post(
+        "/prescriptions",
+        json=payload,
+        headers=make_headers(rx_doctor.id, "doctor"),
+    )
     rx_id = create_res.json()["id"]
 
-    res = await async_client.get(f"/prescriptions/{rx_id}/pdf", headers=doctor_headers)
+    res = await async_client.get(
+        f"/prescriptions/{rx_id}/pdf",
+        headers=make_headers(rx_doctor.id, "doctor"),
+    )
     assert res.status_code == 200
     assert res.headers["content-type"] == "application/pdf"
     assert len(res.content) > 100  # non-trivial PDF bytes
