@@ -1,7 +1,6 @@
 """Test configuration and shared fixtures.
 
 Uses SQLite (aiosqlite) for an in-memory test database — no PostgreSQL required.
-Redis is mocked via fakeredis so tests run fully offline.
 
 The PHI_ENCRYPTION_KEY env var is set to a deterministic test key so
 EncryptedString TypeDecorator works in tests.
@@ -9,7 +8,6 @@ EncryptedString TypeDecorator works in tests.
 
 import os
 
-import fakeredis
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -22,7 +20,7 @@ os.environ.setdefault("PHI_ENCRYPTION_KEY", TEST_PHI_KEY)
 
 import app.db as app_db  # noqa: E402 — must import before patching
 import app.routers.ws as ws_module  # noqa: E402 — needed to patch AsyncSessionLocal ref
-from app.db import Base, get_db, get_redis  # noqa: E402
+from app.db import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 
 # Use file-based SQLite so it persists across fixture scopes during a session.
@@ -73,33 +71,18 @@ async def db_session():
 
 @pytest_asyncio.fixture
 async def async_client(db_session):
-    """AsyncClient wired to the FastAPI app with DB and Redis overrides."""
-    fake_redis = fakeredis.FakeAsyncRedis(decode_responses=True)
+    """AsyncClient wired to the FastAPI app with DB override."""
 
     async def override_get_db():
         yield db_session
 
-    async def override_get_redis():
-        return fake_redis
-
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_redis] = override_get_redis
-
-    # Also patch the module-level redis_client to None so WebSocket
-    # endpoints use local relay (no real Redis required for tests).
-    # Must patch both app_db AND ws_module since ws.py uses `from app.db import redis_client`.
-    original_redis = app_db.redis_client
-    original_ws_redis = ws_module.redis_client
-    app_db.redis_client = None
-    ws_module.redis_client = None
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         yield client
 
-    app_db.redis_client = original_redis
-    ws_module.redis_client = original_ws_redis
     app.dependency_overrides.clear()
 
 

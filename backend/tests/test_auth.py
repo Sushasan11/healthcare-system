@@ -2,7 +2,7 @@
 
 Tests use the async_client fixture from conftest.py which provides:
 - SQLite (aiosqlite) in-memory test database
-- fakeredis for Redis isolation
+- KV store backed by test DB
 - httpx AsyncClient with ASGITransport
 
 Helper functions bypass email flow for tests by directly setting DB state.

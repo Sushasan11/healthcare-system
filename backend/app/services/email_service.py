@@ -1,7 +1,7 @@
 """Email service for verification and password reset emails.
 
-Uses fastapi-mail for sending. Falls back to console logging if SMTP
-connection fails so dev environments without Mailtrap/MailHog don't crash.
+Uses fastapi-mail with Gmail SMTP. Falls back to console logging if SMTP
+connection fails so dev environments without SMTP don't crash.
 
 Tokens are JWTs (HS256) with:
   - sub: str(user_id)
@@ -30,23 +30,18 @@ def _create_email_token(user_id: int, token_type: str) -> str:
 
 
 def _get_mail_config() -> ConnectionConfig:
-    # Normalize the from address — fastapi-mail validates it as a real email.
-    # If the configured address uses a local/reserved domain, fall back to a safe default.
-    from_email = settings.EMAILS_FROM_EMAIL
-    if from_email.endswith(".local") or "@" not in from_email:
-        from_email = "noreply@healthconnect.dev"
-
     return ConnectionConfig(
-        MAIL_USERNAME=settings.SMTP_USER,
-        MAIL_PASSWORD=settings.SMTP_PASSWORD,
-        MAIL_FROM=from_email,
-        MAIL_FROM_NAME=settings.EMAILS_FROM_NAME,
-        MAIL_PORT=settings.SMTP_PORT,
-        MAIL_SERVER=settings.SMTP_HOST,
-        MAIL_STARTTLS=False,
+        MAIL_USERNAME=settings.MAIL_USERNAME,
+        MAIL_PASSWORD=settings.MAIL_PASSWORD,
+        MAIL_FROM=settings.MAIL_FROM,
+        MAIL_FROM_NAME=settings.MAIL_FROM_NAME,
+        MAIL_PORT=settings.MAIL_PORT,
+        MAIL_SERVER=settings.MAIL_SERVER,
+        MAIL_STARTTLS=True,
         MAIL_SSL_TLS=False,
-        USE_CREDENTIALS=bool(settings.SMTP_USER),
-        VALIDATE_CERTS=False,
+        USE_CREDENTIALS=True,
+        VALIDATE_CERTS=True,
+        SUPPRESS_SEND=settings.MAIL_SUPPRESS_SEND,
     )
 
 

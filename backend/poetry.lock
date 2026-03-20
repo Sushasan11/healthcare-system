@@ -649,30 +649,6 @@ dnspython = ">=2.0.0"
 idna = ">=2.0.0"
 
 [[package]]
-name = "fakeredis"
-version = "2.34.1"
-description = "Python implementation of redis API, can be used for testing purposes."
-optional = false
-python-versions = ">=3.7"
-groups = ["dev"]
-files = [
-    {file = "fakeredis-2.34.1-py3-none-any.whl", hash = "sha256:0107ec99d48913e7eec2a5e3e2403d1bd5f8aa6489d1a634571b975289c48f12"},
-    {file = "fakeredis-2.34.1.tar.gz", hash = "sha256:4ff55606982972eecce3ab410e03d746c11fe5deda6381d913641fbd8865ea9b"},
-]
-
-[package.dependencies]
-redis = {version = ">=4.3", markers = "python_version > \"3.8\""}
-sortedcontainers = ">=2"
-
-[package.extras]
-bf = ["pyprobables (>=0.6)"]
-cf = ["pyprobables (>=0.6)"]
-json = ["jsonpath-ng (>=1.6)"]
-lua = ["lupa (>=2.1)"]
-probabilistic = ["pyprobables (>=0.6)"]
-valkey = ["valkey (>=6) ; python_version >= \"3.8\""]
-
-[[package]]
 name = "fastapi"
 version = "0.135.1"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
@@ -2010,26 +1986,6 @@ files = [
 ]
 
 [[package]]
-name = "redis"
-version = "7.3.0"
-description = "Python client for Redis database and key-value store"
-optional = false
-python-versions = ">=3.10"
-groups = ["main", "dev"]
-files = [
-    {file = "redis-7.3.0-py3-none-any.whl", hash = "sha256:9d4fcb002a12a5e3c3fbe005d59c48a2cc231f87fbb2f6b70c2d89bb64fec364"},
-    {file = "redis-7.3.0.tar.gz", hash = "sha256:4d1b768aafcf41b01022410b3cc4f15a07d9b3d6fe0c66fc967da2c88e551034"},
-]
-
-[package.extras]
-circuit-breaker = ["pybreaker (>=1.4.0)"]
-hiredis = ["hiredis (>=3.2.0)"]
-jwt = ["pyjwt (>=2.9.0)"]
-ocsp = ["cryptography (>=36.0.1)", "pyopenssl (>=20.0.1)", "requests (>=2.31.0)"]
-otel = ["opentelemetry-api (>=1.39.1)", "opentelemetry-exporter-otlp-proto-http (>=1.39.1)", "opentelemetry-sdk (>=1.39.1)"]
-xxhash = ["xxhash (>=3.6.0,<3.7.0)"]
-
-[[package]]
 name = "regex"
 version = "2025.11.3"
 description = "Alternative regular expression module, to replace re."
@@ -2471,18 +2427,6 @@ limits = ">=2.3"
 redis = ["redis (>=3.4.1,<4.0.0)"]
 
 [[package]]
-name = "sortedcontainers"
-version = "2.4.0"
-description = "Sorted Containers -- Sorted List, Sorted Dict, Sorted Set"
-optional = false
-python-versions = "*"
-groups = ["dev"]
-files = [
-    {file = "sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0"},
-    {file = "sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"},
-]
-
-[[package]]
 name = "sqlalchemy"
 version = "2.0.48"
 description = "Database Abstraction Library"
@@ -2646,6 +2590,18 @@ files = [
 
 [package.dependencies]
 typing-extensions = ">=4.12.0"
+
+[[package]]
+name = "tzdata"
+version = "2025.3"
+description = "Provider of IANA time zone data"
+optional = false
+python-versions = ">=2"
+groups = ["main"]
+files = [
+    {file = "tzdata-2025.3-py2.py3-none-any.whl", hash = "sha256:06a47e5700f3081aab02b2e513160914ff0694bce9947d6b76ebd6bf57cfc5d1"},
+    {file = "tzdata-2025.3.tar.gz", hash = "sha256:de39c2ca5dc7b0344f2eba86f49d614019d29f060fc4ebc8a417896a620b56a7"},
+]
 
 [[package]]
 name = "urllib3"
@@ -3055,4 +3011,4 @@ dev = ["pytest", "setuptools"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.15"
-content-hash = "1062ea7059587bb8b435e51d746fdd719f672fa03fb1e26eaea932c7dea35205"
+content-hash = "b3b35bb44ec8fe1f44d7999fc87a1c0daf8219798a249a5522a780588e6a3f4d"

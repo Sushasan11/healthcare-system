@@ -20,7 +20,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
-from app.db import AsyncSessionLocal, redis_client
+from app.db import AsyncSessionLocal
 from app.models.appointment import Appointment
 from app.models.consultation import Consultation, Message
 from app.services.consultation_manager import manager
@@ -78,12 +78,9 @@ async def consultation_ws(
     # --- Accept connection ---
     await ws.accept()
 
-    redis = redis_client
-
     # --- Register with manager and broadcast presence ---
-    await manager.connect(consultation_id, user_id, ws, redis)
+    await manager.connect(consultation_id, user_id, ws)
     await manager.publish(
-        redis,
         consultation_id,
         {"type": "presence", "user_id": user_id, "status": "online"},
     )
@@ -104,23 +101,22 @@ async def consultation_ws(
             # --- Message dispatch ---
             if msg_type == "chat_message":
                 await _handle_chat_message(
-                    msg, consultation_id, user_id, redis, db
+                    msg, consultation_id, user_id
                 )
 
             elif msg_type == "message_delivered":
                 await _handle_receipt(
-                    msg, "delivered_at", consultation_id, user_id, redis
+                    msg, "delivered_at", consultation_id, user_id
                 )
 
             elif msg_type == "message_read":
                 await _handle_receipt(
-                    msg, "read_at", consultation_id, user_id, redis
+                    msg, "read_at", consultation_id, user_id
                 )
 
             elif msg_type in ("typing_start", "typing_stop"):
                 # Relay without DB persistence
                 await manager.publish(
-                    redis,
                     consultation_id,
                     {"type": msg_type, "user_id": user_id},
                 )
@@ -138,7 +134,6 @@ async def consultation_ws(
                     )
                 else:
                     await manager.publish(
-                        redis,
                         consultation_id,
                         {
                             "type": "call_initiated",
@@ -158,11 +153,10 @@ async def consultation_ws(
                 # WebRTC signaling and call control — relay without modification
                 relay_msg = dict(msg)
                 relay_msg["sender_id"] = user_id
-                await manager.publish(redis, consultation_id, relay_msg)
+                await manager.publish(consultation_id, relay_msg)
 
             elif msg_type == "consultation_ended":
                 await manager.publish(
-                    redis,
                     consultation_id,
                     {"type": "consultation_ended", "user_id": user_id},
                 )
@@ -182,7 +176,6 @@ async def consultation_ws(
         await manager.disconnect(consultation_id, user_id)
         try:
             await manager.publish(
-                redis,
                 consultation_id,
                 {"type": "presence", "user_id": user_id, "status": "offline"},
             )
@@ -194,8 +187,6 @@ async def _handle_chat_message(
     msg: dict,
     consultation_id: int,
     sender_id: int,
-    redis,
-    db,
 ):
     """Persist chat message to DB (content encrypted via EncryptedString) and publish."""
     async with AsyncSessionLocal() as session:
@@ -215,7 +206,6 @@ async def _handle_chat_message(
         )
 
     await manager.publish(
-        redis,
         consultation_id,
         {
             "type": "chat_message",
@@ -232,7 +222,6 @@ async def _handle_receipt(
     field: str,
     consultation_id: int,
     user_id: int,
-    redis,
 ):
     """Update delivered_at or read_at on a Message row and relay confirmation."""
     message_id = msg.get("message_id")
@@ -250,7 +239,6 @@ async def _handle_receipt(
 
     receipt_type = "message_delivered" if field == "delivered_at" else "message_read"
     await manager.publish(
-        redis,
         consultation_id,
         {
             "type": receipt_type,

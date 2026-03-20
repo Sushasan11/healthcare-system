@@ -2,7 +2,7 @@
 
 Tests use the async_client fixture from conftest.py which provides:
 - SQLite (aiosqlite) in-memory test database
-- fakeredis for Redis isolation
+- KV store backed by test DB
 """
 
 from datetime import date, timedelta

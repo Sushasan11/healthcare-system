@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -9,17 +9,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/lib/auth-context";
+import Script from "next/script";
+
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const sessionExpired = searchParams?.get("reason") === "session_expired";
 
@@ -29,6 +33,28 @@ function LoginForm() {
     }
   }, [sessionExpired]);
 
+  const redirectByRole = useCallback(
+    (token: string) => {
+      import("@/lib/auth").then(({ parseToken }) => {
+        const parsed = parseToken(token);
+        if (parsed) {
+          if (parsed.role === "patient") {
+            router.push("/patient/dashboard");
+          } else if (parsed.role === "doctor") {
+            router.push("/doctor/dashboard");
+          } else if (parsed.role === "pharmacist") {
+            router.push("/pharmacist/dashboard");
+          } else if (parsed.role === "admin") {
+            router.push("/admin/dashboard");
+          } else {
+            router.push("/login");
+          }
+        }
+      });
+    },
+    [router]
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -37,34 +63,9 @@ function LoginForm() {
     try {
       const result = await login(email, password);
       if (result.success) {
-        // Role-based redirect is handled inside AuthContext after refreshUser
-        // We need the user's role to redirect correctly
-        // The auth context sets the user — read from the response
-        // We'll use the user from context after login
-        // Actually, login doesn't return user data directly;
-        // we redirect to a generic route that will resolve to the role dashboard
-        // The proxy.ts will handle role-based gating
-        // For now, navigate to a page that reads user role from context
-        // The user role comes from the /me call inside refreshUser
-        // We'll handle redirect here by reading the cookie or token
-        import("@/lib/auth").then(({ parseToken, getAccessToken }) => {
+        import("@/lib/auth").then(({ getAccessToken }) => {
           const token = getAccessToken();
-          if (token) {
-            const parsed = parseToken(token);
-            if (parsed) {
-              if (parsed.role === "patient") {
-                router.push("/patient/dashboard");
-              } else if (parsed.role === "doctor") {
-                router.push("/doctor/dashboard");
-              } else if (parsed.role === "pharmacist") {
-                router.push("/pharmacist/dashboard");
-              } else if (parsed.role === "admin") {
-                router.push("/admin/dashboard");
-              } else {
-                router.push("/login");
-              }
-            }
-          }
+          if (token) redirectByRole(token);
         });
       } else if (result.status === "pending_approval") {
         router.push("/pending-approval");
@@ -76,8 +77,77 @@ function LoginForm() {
     }
   };
 
+  const handleGoogleCallback = useCallback(
+    async (response: { credential: string }) => {
+      setError(null);
+      setGoogleLoading(true);
+      try {
+        const result = await googleLogin(response.credential);
+        if (result.success) {
+          import("@/lib/auth").then(({ getAccessToken }) => {
+            const token = getAccessToken();
+            if (token) redirectByRole(token);
+          });
+        } else {
+          setError(result.error || "Google login failed.");
+        }
+      } finally {
+        setGoogleLoading(false);
+      }
+    },
+    [googleLogin, redirectByRole]
+  );
+
+  const initializeGoogle = useCallback(() => {
+    if (
+      typeof window !== "undefined" &&
+      (window as unknown as Record<string, unknown>).google &&
+      GOOGLE_CLIENT_ID
+    ) {
+      const google = (
+        window as unknown as {
+          google: {
+            accounts: {
+              id: {
+                initialize: (config: Record<string, unknown>) => void;
+                renderButton: (
+                  el: HTMLElement,
+                  config: Record<string, unknown>
+                ) => void;
+              };
+            };
+          };
+        }
+      ).google;
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCallback,
+      });
+      const btnEl = document.getElementById("google-signin-btn");
+      if (btnEl) {
+        google.accounts.id.renderButton(btnEl, {
+          theme: "outline",
+          size: "large",
+          width: "100%",
+          text: "signin_with",
+        });
+      }
+    }
+  }, [handleGoogleCallback]);
+
+  useEffect(() => {
+    initializeGoogle();
+  }, [initializeGoogle]);
+
   return (
     <div className="w-full max-w-[400px]">
+      {/* Google Identity Services script */}
+      <Script
+        src="https://accounts.google.com/gsi/client"
+        onLoad={initializeGoogle}
+        strategy="afterInteractive"
+      />
+
       {/* Logo */}
       <div className="text-center mb-6">
         <span className="text-xl font-semibold text-[#0F172A]">
@@ -100,6 +170,36 @@ function LoginForm() {
             <Alert variant="destructive" className="mb-4" role="alert">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
+          )}
+
+          {/* Google Sign-In Button */}
+          {GOOGLE_CLIENT_ID && (
+            <>
+              <div className="mb-4">
+                {googleLoading ? (
+                  <div className="flex items-center justify-center h-10 border rounded-md">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Signing in with Google...
+                  </div>
+                ) : (
+                  <div
+                    id="google-signin-btn"
+                    className="flex justify-center"
+                  />
+                )}
+              </div>
+
+              <div className="relative mb-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-[#E2E8F0]" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-[#64748B]">
+                    or continue with email
+                  </span>
+                </div>
+              </div>
+            </>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">

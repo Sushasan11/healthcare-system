@@ -4,14 +4,16 @@ Handles registration, authentication, session management, lockout,
 email verification, and password reset. Routers are thin; all logic lives here.
 
 Lockout strategy:
-  - Redis key: lockout:{email}
+  - DB key: lockout:{email}
   - After 5 failed attempts: raise 429
   - TTL: 900 seconds (15 minutes) — reset on each failed attempt
   - Cleared on successful login
 """
 
 import logging
+import secrets
 
+import httpx
 import jwt
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -36,6 +38,9 @@ from app.services.email_service import (
     send_password_reset_email,
     send_verification_email,
 )
+from app.services.kv_store import KVStore
+
+GOOGLE_TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo"
 
 logger = logging.getLogger(__name__)
 
@@ -48,10 +53,10 @@ LOCKOUT_TTL = 900  # 15 minutes in seconds
 # ---------------------------------------------------------------------------
 
 
-async def check_lockout(redis, email: str) -> None:
+async def check_lockout(kv: KVStore, email: str) -> None:
     """Raise 429 if the email has reached the lockout threshold."""
     key = f"lockout:{email}"
-    count = await redis.get(key)
+    count = await kv.get(key)
     if count and int(count) >= LOCKOUT_THRESHOLD:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -59,16 +64,16 @@ async def check_lockout(redis, email: str) -> None:
         )
 
 
-async def record_failed_attempt(redis, email: str) -> None:
+async def record_failed_attempt(kv: KVStore, email: str) -> None:
     """Increment failed attempt counter and set/reset TTL."""
     key = f"lockout:{email}"
-    await redis.incr(key)
-    await redis.expire(key, LOCKOUT_TTL)
+    await kv.incr(key)
+    await kv.expire(key, LOCKOUT_TTL)
 
 
-async def clear_lockout(redis, email: str) -> None:
+async def clear_lockout(kv: KVStore, email: str) -> None:
     """Remove lockout key on successful login."""
-    await redis.delete(f"lockout:{email}")
+    await kv.delete(f"lockout:{email}")
 
 
 # ---------------------------------------------------------------------------
@@ -76,14 +81,14 @@ async def clear_lockout(redis, email: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def store_refresh_token(redis, token: str, user_id: int, ttl: int) -> None:
-    """Store refresh token in Redis with TTL."""
-    await redis.setex(f"refresh:{token}", ttl, str(user_id))
+async def store_refresh_token(kv: KVStore, token: str, user_id: int, ttl: int) -> None:
+    """Store refresh token with TTL."""
+    await kv.setex(f"refresh:{token}", ttl, str(user_id))
 
 
-async def revoke_refresh_token(redis, token: str) -> None:
-    """Delete refresh token from Redis."""
-    await redis.delete(f"refresh:{token}")
+async def revoke_refresh_token(kv: KVStore, token: str) -> None:
+    """Delete refresh token."""
+    await kv.delete(f"refresh:{token}")
 
 
 # ---------------------------------------------------------------------------
@@ -179,7 +184,6 @@ async def authenticate(
     email: str,
     password: str,
     db: AsyncSession,
-    redis,
 ) -> tuple[User, str, str]:
     """Authenticate user. Returns (user, access_token, refresh_token).
 
@@ -188,7 +192,8 @@ async def authenticate(
     - Raises 401 with uniform message for wrong email or wrong password.
     - Clears lockout counter on success; increments on failure.
     """
-    await check_lockout(redis, email)
+    kv = KVStore(db)
+    await check_lockout(kv, email)
 
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
@@ -198,21 +203,21 @@ async def authenticate(
     password_ok = verify_password(password, candidate_hash)
 
     if not user or not password_ok:
-        await record_failed_attempt(redis, email)
+        await record_failed_attempt(kv, email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
 
     # Successful authentication — clear lockout
-    await clear_lockout(redis, email)
+    await clear_lockout(kv, email)
 
     access_token = create_access_token(sub=str(user.id), role=user.role)
     refresh_token = create_refresh_token(sub=str(user.id))
 
-    # Store refresh token in Redis
+    # Store refresh token
     ttl = settings.REFRESH_TOKEN_EXPIRE_HOURS * 3600
-    await store_refresh_token(redis, refresh_token, user.id, ttl)
+    await store_refresh_token(kv, refresh_token, user.id, ttl)
 
     return user, access_token, refresh_token
 
@@ -285,6 +290,83 @@ async def reset_password(token: str, new_password: str, db: AsyncSession) -> Non
 
     user.hashed_password = hash_password(new_password)
     await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Google OAuth
+# ---------------------------------------------------------------------------
+
+
+async def google_authenticate(
+    id_token: str,
+    db: AsyncSession,
+) -> tuple[User, str, str, bool]:
+    """Verify Google ID token and login or register the user.
+
+    Returns (user, access_token, refresh_token, is_new_user).
+    """
+    # Verify token with Google
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(GOOGLE_TOKENINFO_URL, params={"id_token": id_token})
+
+    if resp.status_code != 200:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Google token",
+        )
+
+    payload = resp.json()
+
+    # Verify audience matches our client ID
+    if payload.get("aud") != settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token not intended for this application",
+        )
+
+    email = payload.get("email")
+    if not email or payload.get("email_verified") != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google account email not verified",
+        )
+
+    full_name = payload.get("name", email.split("@")[0])
+
+    # Check if user exists
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    is_new = False
+
+    if not user:
+        # Auto-register as patient with a random password (OAuth-only account)
+        user = User(
+            email=email,
+            hashed_password=hash_password(secrets.token_urlsafe(32)),
+            full_name=full_name,
+            role=UserRole.patient,
+            account_status=AccountStatus.active,
+            email_verified=True,
+            is_active=True,
+        )
+        db.add(user)
+        await db.flush()
+
+        profile = PatientProfile(user_id=user.id)
+        db.add(profile)
+        await db.commit()
+        await db.refresh(user)
+        is_new = True
+
+    access_token = create_access_token(sub=str(user.id), role=user.role)
+    refresh_token = create_refresh_token(sub=str(user.id))
+
+    # Store refresh token
+    kv = KVStore(db)
+    ttl = settings.REFRESH_TOKEN_EXPIRE_HOURS * 3600
+    await store_refresh_token(kv, refresh_token, user.id, ttl)
+
+    return user, access_token, refresh_token, is_new
 
 
 # ---------------------------------------------------------------------------

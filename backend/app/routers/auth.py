@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.deps import get_current_user
 from app.core.security import create_access_token, decode_token
-from app.db import get_db, get_redis
+from app.db import get_db
 from app.schemas.auth import (
     DoctorRegisterRequest,
     ForgotPasswordRequest,
@@ -31,6 +31,7 @@ from app.schemas.auth import (
 )
 from app.schemas.user import UserOut
 from app.services import auth_service
+from app.services.kv_store import KVStore
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -98,10 +99,9 @@ async def login(
     request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db),
-    redis=Depends(get_redis),
 ):
     user, access_token, refresh_token = await auth_service.authenticate(
-        data.email, data.password, db, redis
+        data.email, data.password, db
     )
 
     # Check email verification
@@ -129,6 +129,39 @@ async def login(
 
 
 # ---------------------------------------------------------------------------
+# Google OAuth
+# ---------------------------------------------------------------------------
+
+
+@router.post("/google", response_model=TokenResponse)
+async def google_login(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    body = await request.json()
+    id_token = body.get("token")
+    if not id_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing Google ID token",
+        )
+
+    user, access_token, refresh_token, is_new = await auth_service.google_authenticate(
+        id_token, db
+    )
+
+    if user.account_status.value == "suspended":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account suspended.",
+        )
+
+    _set_refresh_cookie(response, refresh_token)
+    return TokenResponse(access_token=access_token)
+
+
+# ---------------------------------------------------------------------------
 # Session management
 # ---------------------------------------------------------------------------
 
@@ -138,7 +171,6 @@ async def refresh_token(
     request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db),
-    redis=Depends(get_redis),
 ):
     token = request.cookies.get(REFRESH_COOKIE_NAME)
     if not token:
@@ -162,8 +194,9 @@ async def refresh_token(
             detail="Invalid token type",
         )
 
-    # Check Redis — token must still be present (not revoked)
-    stored = await redis.get(f"refresh:{token}")
+    # Check DB — token must still be present (not revoked)
+    kv = KVStore(db)
+    stored = await kv.get(f"refresh:{token}")
     if not stored:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -188,11 +221,12 @@ async def logout(
     request: Request,
     response: Response,
     current_user=Depends(get_current_user),
-    redis=Depends(get_redis),
+    db: AsyncSession = Depends(get_db),
 ):
     token = request.cookies.get(REFRESH_COOKIE_NAME)
     if token:
-        await auth_service.revoke_refresh_token(redis, token)
+        kv = KVStore(db)
+        await auth_service.revoke_refresh_token(kv, token)
     _clear_refresh_cookie(response)
     return {"detail": "Logged out"}
 

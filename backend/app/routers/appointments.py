@@ -1,7 +1,7 @@
 """Appointments router — slot holds, booking, listing, and cancellation.
 
 Endpoints:
-  POST   /appointments/hold     — patient holds a slot via Redis SETNX
+  POST   /appointments/hold     — patient holds a slot via DB SETNX
   POST   /appointments          — patient books a confirmed appointment
   GET    /appointments          — role-filtered appointment listing
   DELETE /appointments/{id}     — cancel appointment (2-hour guard)
@@ -15,7 +15,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, require_role
-from app.db import get_db, get_redis
+from app.db import get_db
 from app.models.appointment import Appointment, AppointmentStatus
 from app.models.user import AccountStatus, User, UserRole
 from app.schemas.appointment import (
@@ -24,6 +24,7 @@ from app.schemas.appointment import (
     SlotHoldRequest,
     SlotHoldResponse,
 )
+from app.services.kv_store import KVStore
 
 router = APIRouter(prefix="/appointments", tags=["appointments"])
 
@@ -35,20 +36,16 @@ SLOT_HOLD_TTL = 300  # 5 minutes in seconds
 # ---------------------------------------------------------------------------
 
 
-async def acquire_slot_hold(redis, doctor_id: int, slot_dt: datetime) -> bool:
-    """Try to acquire a Redis SETNX hold on a slot. Returns True if acquired."""
-    if redis is None:
-        return True  # No Redis available — skip hold (dev/test fallback)
+async def acquire_slot_hold(kv: KVStore, doctor_id: int, slot_dt: datetime) -> bool:
+    """Try to acquire a slot hold. Returns True if acquired."""
     key = f"slot_hold:{doctor_id}:{slot_dt.isoformat()}"
-    result = await redis.set(key, "held", nx=True, ex=SLOT_HOLD_TTL)
+    result = await kv.set(key, "held", nx=True, ex=SLOT_HOLD_TTL)
     return result is not None
 
 
-async def release_slot_hold(redis, doctor_id: int, slot_dt: datetime) -> None:
-    """Release a Redis slot hold key."""
-    if redis is None:
-        return
-    await redis.delete(f"slot_hold:{doctor_id}:{slot_dt.isoformat()}")
+async def release_slot_hold(kv: KVStore, doctor_id: int, slot_dt: datetime) -> None:
+    """Release a slot hold key."""
+    await kv.delete(f"slot_hold:{doctor_id}:{slot_dt.isoformat()}")
 
 
 def _build_appointment_out(appt: Appointment) -> AppointmentOut:
@@ -78,9 +75,8 @@ async def hold_slot(
     data: SlotHoldRequest,
     current_user: User = Depends(require_role("patient")),
     db: AsyncSession = Depends(get_db),
-    redis=Depends(get_redis),
 ):
-    """Hold a slot for 5 minutes via Redis SETNX. Patient role only."""
+    """Hold a slot for 5 minutes. Patient role only."""
     # Check DB for existing non-cancelled appointment at this slot
     existing = await db.execute(
         select(Appointment).where(
@@ -95,8 +91,9 @@ async def hold_slot(
             detail="Slot already booked",
         )
 
-    # Acquire Redis hold
-    acquired = await acquire_slot_hold(redis, data.doctor_id, data.slot_datetime)
+    # Acquire slot hold
+    kv = KVStore(db)
+    acquired = await acquire_slot_hold(kv, data.doctor_id, data.slot_datetime)
     if not acquired:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -112,7 +109,6 @@ async def book_appointment(
     data: AppointmentCreate,
     current_user: User = Depends(require_role("patient")),
     db: AsyncSession = Depends(get_db),
-    redis=Depends(get_redis),
 ):
     """Book a confirmed appointment. Patient role only."""
     # Check DB for existing non-cancelled appointment
@@ -157,7 +153,8 @@ async def book_appointment(
     await db.refresh(appointment)
 
     # Release slot hold
-    await release_slot_hold(redis, data.doctor_id, data.slot_datetime)
+    kv = KVStore(db)
+    await release_slot_hold(kv, data.doctor_id, data.slot_datetime)
 
     # Eager-load patient and doctor relationships
     result = await db.execute(

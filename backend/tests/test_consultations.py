@@ -473,15 +473,3 @@ async def test_video_escalation_signal(async_client, test_consultation):
 
     assert len(video_signals) >= 1, "Patient should receive call_initiated for video escalation"
     assert video_signals[0]["media"] == "video"
-
-
-@pytest.mark.skip("Requires real Redis for pub/sub integration test — fakeredis does not fully support pubsub listen()")
-def test_redis_pubsub_relay(test_consultation):
-    """Multi-worker: messages publish to Redis and relay to other worker connections.
-
-    In production, messages go through Redis pub/sub for cross-worker delivery.
-    In test mode with fakeredis, the pubsub listen() loop may not relay messages
-    correctly, so this test is skipped. The manager.publish() call to redis.publish()
-    is unit-testable separately.
-    """
-    pass

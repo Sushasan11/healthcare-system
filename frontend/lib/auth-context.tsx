@@ -33,6 +33,9 @@ interface AuthContextType {
     email: string,
     password: string
   ) => Promise<{ success: boolean; error?: string; status?: string }>;
+  googleLogin: (
+    token: string
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -139,6 +142,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   };
 
+  const googleLogin = async (token: string) => {
+    const res = await apiFetch("/auth/google", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setAccessToken(data.access_token);
+      const parsed = parseToken(data.access_token);
+      if (parsed) {
+        setAuthSessionCookie(parsed.role);
+      }
+      await refreshUser();
+      return { success: true };
+    }
+    const error = await res
+      .json()
+      .catch(() => ({ detail: "Google login failed. Please try again." }));
+    return { success: false, error: error.detail || "Google login failed." };
+  };
+
   const logout = async () => {
     await apiFetch("/auth/logout", { method: "POST" });
     clearAccessToken();
@@ -148,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, googleLogin, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

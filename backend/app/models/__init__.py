@@ -5,6 +5,7 @@ from app.models.appointment import Appointment, AppointmentStatus
 from app.models.consultation import Consultation, ConsultationStatus, Message
 from app.models.prescription import Prescription, PrescriptionItem, PrescriptionStatus, Drug
 from app.models.notification import Notification, NotificationType
+from app.models.kv_store import KeyValueEntry
 
 __all__ = [
     "User",
@@ -25,4 +26,5 @@ __all__ = [
     "Drug",
     "Notification",
     "NotificationType",
+    "KeyValueEntry",
 ]
