@@ -50,3 +50,6 @@ class User(Base):
     patient_profile: Mapped["PatientProfile | None"] = relationship(  # noqa: F821
         back_populates="user", uselist=False
     )
+    doctor_profile: Mapped["DoctorProfile | None"] = relationship(  # noqa: F821
+        back_populates="user", uselist=False
+    )
