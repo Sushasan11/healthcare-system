@@ -20,6 +20,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 TEST_PHI_KEY = os.urandom(32).hex()
 os.environ.setdefault("PHI_ENCRYPTION_KEY", TEST_PHI_KEY)
 
+import app.db as app_db  # noqa: E402 — must import before patching
+import app.routers.ws as ws_module  # noqa: E402 — needed to patch AsyncSessionLocal ref
 from app.db import Base, get_db, get_redis  # noqa: E402
 from app.main import app  # noqa: E402
 
@@ -36,10 +38,28 @@ TestSessionLocal = async_sessionmaker(test_engine, expire_on_commit=False)
 
 @pytest.fixture(autouse=True, scope="module")
 async def create_test_tables():
-    """Create all tables before the module's tests, drop them after."""
+    """Create all tables before the module's tests, drop them after.
+
+    Also patches app.db.AsyncSessionLocal → TestSessionLocal so WebSocket
+    endpoints (which use AsyncSessionLocal directly) hit the test SQLite DB.
+    """
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Patch the module-level AsyncSessionLocal used by WebSocket endpoints.
+    # ws.py does `from app.db import AsyncSessionLocal` so we must patch
+    # both the source (app_db) AND the cached name in ws_module.
+    original_session_local = app_db.AsyncSessionLocal
+    original_ws_session_local = ws_module.AsyncSessionLocal
+    app_db.AsyncSessionLocal = TestSessionLocal
+    ws_module.AsyncSessionLocal = TestSessionLocal
+
     yield
+
+    # Restore originals after tests
+    app_db.AsyncSessionLocal = original_session_local
+    ws_module.AsyncSessionLocal = original_ws_session_local
+
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
@@ -65,11 +85,21 @@ async def async_client(db_session):
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_redis] = override_get_redis
 
+    # Also patch the module-level redis_client to None so WebSocket
+    # endpoints use local relay (no real Redis required for tests).
+    # Must patch both app_db AND ws_module since ws.py uses `from app.db import redis_client`.
+    original_redis = app_db.redis_client
+    original_ws_redis = ws_module.redis_client
+    app_db.redis_client = None
+    ws_module.redis_client = None
+
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         yield client
 
+    app_db.redis_client = original_redis
+    ws_module.redis_client = original_ws_redis
     app.dependency_overrides.clear()
 
 
