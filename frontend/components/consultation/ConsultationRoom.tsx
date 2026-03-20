@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Phone, Video, PhoneOff, MessageSquare } from "lucide-react";
+import { Phone, Video, PhoneOff, MessageSquare, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +29,7 @@ import { ChatPanel } from "./ChatPanel";
 import { VideoPanel } from "./VideoPanel";
 import { CallControls } from "./CallControls";
 import { CallModal } from "./CallModal";
+import { PrescriptionForm } from "@/components/prescription/PrescriptionForm";
 import type {
   ConsultationResponse,
   MessageResponse,
@@ -66,6 +67,7 @@ export default function ConsultationRoom({ consultationId }: ConsultationRoomPro
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [showEndDialog, setShowEndDialog] = useState(false);
+  const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
   const [isChatVisible, setIsChatVisible] = useState(true);
   const [isConsultationEnded, setIsConsultationEnded] = useState(false);
 
@@ -328,8 +330,6 @@ export default function ConsultationRoom({ consultationId }: ConsultationRoomPro
     );
   }
 
-  // Suppress unused variable warning for consultation
-  void consultation;
   void status;
 
   return (
@@ -429,6 +429,17 @@ export default function ConsultationRoom({ consultationId }: ConsultationRoomPro
 
             {role === "doctor" && !isRinging && (
               <div className="flex items-center gap-2 flex-shrink-0">
+                {user?.role === "doctor" && consultation?.status === "active" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowPrescriptionForm(true)}
+                    className="gap-1 h-7 text-xs border-[#0EA5E9] text-[#0EA5E9] hover:bg-[#0EA5E9]/10"
+                  >
+                    <FileText size={14} />
+                    Write Prescription
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   className="bg-[#0EA5E9] hover:bg-[#0284C7] text-white h-7 text-xs"
@@ -511,6 +522,18 @@ export default function ConsultationRoom({ consultationId }: ConsultationRoomPro
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Write Prescription dialog (doctor only) */}
+      {consultation && (
+        <PrescriptionForm
+          open={showPrescriptionForm}
+          onOpenChange={setShowPrescriptionForm}
+          consultationId={consultation.id}
+          onSuccess={() => {
+            setShowPrescriptionForm(false);
+          }}
+        />
       )}
     </div>
   );
