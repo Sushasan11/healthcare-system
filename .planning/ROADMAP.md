@@ -91,7 +91,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md — Backend models (Prescription, PrescriptionItem, Drug, Notification), schemas, HMAC utility, PDF service, drug seed data, test scaffold
-- [ ] 04-02-PLAN.md — Backend API routers (prescriptions CRUD + PDF, drugs autocomplete, notifications, consultation reopen) with integration tests
+- [x] 04-02-PLAN.md — Backend API routers (prescriptions CRUD + PDF, drugs autocomplete, notifications, consultation reopen) with integration tests
 - [ ] 04-03-PLAN.md — Frontend TypeScript types, prescription components (Form, Card, Detail, DrugAutocomplete, MedicineRow), NotificationPanel, Sidebar and TopBar updates
 - [ ] 04-04-PLAN.md — Frontend prescription pages (patient list/detail, doctor list/detail, pharmacist placeholder), ConsultationRoom Write Prescription integration
 

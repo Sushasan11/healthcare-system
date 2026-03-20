@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 04-prescriptions-04-01-PLAN.md
-last_updated: "2026-03-20T18:48:36.102Z"
+stopped_at: Completed 04-prescriptions-04-02-PLAN.md
+last_updated: "2026-03-20T19:04:40.589Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 22
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 04 (prescriptions) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Plan: 2 of 4
 | Phase 03-real-time-consultation P04b | 10 min | 2 tasks | 6 files |
 | Phase 03-real-time-consultation PP06 | 2 min | 2 tasks | 2 files |
 | Phase 04-prescriptions P01 | 18 | 2 tasks | 12 files |
+| Phase 04-prescriptions P02 | 20 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,8 @@ Recent decisions affecting current work:
 - [Phase 04-prescriptions]: Prescription model uses explicit foreign_keys=[doctor_id] and foreign_keys=[patient_id] on relationships to avoid AmbiguousForeignKeysError
 - [Phase 04-prescriptions]: All PrescriptionItem PHI fields use EncryptedString (AES-256-GCM): medicine_name, dosage_amount, dosage_unit, frequency, duration, instructions
 - [Phase 04-prescriptions]: HMAC sorts items by medicine_name for deterministic digest; reportlab 4.4.10 used for PDF generation from dict data
+- [Phase 04-02]: Test fixtures use DB-direct user creation — registration endpoints are role-specific, no unified endpoint exists
+- [Phase 04-02]: POST /consultations returns HTTP 201 (fixed from 200) to match expected semantics
 
 ### Pending Todos
 
@@ -123,6 +126,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T18:48:36.094Z
-Stopped at: Completed 04-prescriptions-04-01-PLAN.md
+Last session: 2026-03-20T19:04:40.576Z
+Stopped at: Completed 04-prescriptions-04-02-PLAN.md
 Resume file: None
