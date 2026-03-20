@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 03-05-PLAN.md
-last_updated: "2026-03-20T16:28:39.014Z"
+stopped_at: Completed 03-04a-PLAN.md
+last_updated: "2026-03-20T16:29:27.981Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 18
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 # Project State
@@ -58,6 +58,7 @@ Plan: 1 of 7
 | Phase 03-real-time-consultation P03 | 10 min | 2 tasks | 5 files |
 | Phase 03-real-time-consultation P02 | 24 min | 2 tasks | 9 files |
 | Phase 03-real-time-consultation P05 | 10 min | 2 tasks | 4 files |
+| Phase 03-real-time-consultation P04a | 15 min | 1 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,8 @@ Recent decisions affecting current work:
 - [Phase 03-02]: File download uses FileResponse (not StaticFiles) — PHI content must be auth-gated, not publicly served
 - [Phase 03-05]: Single ConsultationListPage shared between patient and doctor routes — uses useAuth() internally to infer role and heading
 - [Phase 03-05]: Tab filtering sends ?status query param to backend; All tab omits param and filters client-side
+- [Phase 03-real-time-consultation]: FileAttachment download uses apiFetch + Blob URL pattern to pass auth bearer token — direct window.open would bypass auth on PHI files
+- [Phase 03-real-time-consultation]: CallControls camera button only rendered when callMedia === 'video' — not shown for audio-only calls per UI-SPEC
 
 ### Pending Todos
 
@@ -112,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T16:28:39.010Z
-Stopped at: Completed 03-05-PLAN.md
+Last session: 2026-03-20T16:29:27.977Z
+Stopped at: Completed 03-04a-PLAN.md
 Resume file: None

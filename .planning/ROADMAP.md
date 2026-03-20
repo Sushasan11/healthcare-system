@@ -68,7 +68,7 @@ Plans:
   2. Either party can initiate an escalation to audio call within the same consultation session without navigating away
   3. Either party can escalate a call to video within the same consultation session without disconnecting the audio
   4. Consultation messaging works correctly when patient and doctor connect from different browser tabs or machines (multi-worker safe)
-**Plans:** 3/7 plans executed
+**Plans:** 5/7 plans executed
 
 Plans:
 - [ ] 03-01-PLAN.md — Backend models, schemas, migration, and test scaffold for consultations
@@ -108,6 +108,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/6 | In Progress|  |
 | 2. Doctor Discovery and Appointments | 5/5 | Complete   | 2026-03-20 |
-| 3. Real-Time Consultation | 3/7 | In Progress|  |
+| 3. Real-Time Consultation | 5/7 | In Progress|  |
 | 4. Prescriptions | 0/TBD | Not started | - |
 | 5. Admin Panel | 0/TBD | Not started | - |
