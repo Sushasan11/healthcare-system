@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Foundation** - Monorepo scaffold, auth for all 4 roles, PHI-safe data model, Redis infrastructure
 - [x] **Phase 2: Doctor Discovery and Appointments** - Doctor profiles, availability management, patient search, appointment booking (completed 2026-03-20)
-- [ ] **Phase 3: Real-Time Consultation** - WebSocket chat, WebRTC audio/video escalation within one session
+- [x] **Phase 3: Real-Time Consultation** - WebSocket chat, WebRTC audio/video escalation within one session (completed 2026-03-20)
 - [ ] **Phase 4: Prescriptions** - Doctor prescription writing, patient prescription records
 - [ ] **Phase 5: Admin Panel** - User management, doctor verification, commission configuration
 
@@ -68,7 +68,7 @@ Plans:
   2. Either party can initiate an escalation to audio call within the same consultation session without navigating away
   3. Either party can escalate a call to video within the same consultation session without disconnecting the audio
   4. Consultation messaging works correctly when patient and doctor connect from different browser tabs or machines (multi-worker safe)
-**Plans:** 5/7 plans executed
+**Plans:** 7/7 plans complete
 
 Plans:
 - [ ] 03-01-PLAN.md — Backend models, schemas, migration, and test scaffold for consultations
@@ -87,7 +87,13 @@ Plans:
   1. A doctor can open a prescription form during or after a consultation and write a structured prescription (medicine name, dosage, instructions) that is saved and linked to the consultation
   2. A patient can navigate to their prescription history and view all past prescriptions with the issuing doctor, date, and medicine details
   3. A prescription cannot be accessed or viewed by any user other than the issuing doctor and the patient it was issued to
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Backend models (Prescription, PrescriptionItem, Drug, Notification), schemas, HMAC utility, PDF service, drug seed data, test scaffold
+- [ ] 04-02-PLAN.md — Backend API routers (prescriptions CRUD + PDF, drugs autocomplete, notifications, consultation reopen) with integration tests
+- [ ] 04-03-PLAN.md — Frontend TypeScript types, prescription components (Form, Card, Detail, DrugAutocomplete, MedicineRow), NotificationPanel, Sidebar and TopBar updates
+- [ ] 04-04-PLAN.md — Frontend prescription pages (patient list/detail, doctor list/detail, pharmacist placeholder), ConsultationRoom Write Prescription integration
 
 ### Phase 5: Admin Panel
 **Goal**: An admin can exercise full oversight of the platform — managing users across roles, verifying doctor applications, and setting commission rates
@@ -108,6 +114,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/6 | In Progress|  |
 | 2. Doctor Discovery and Appointments | 5/5 | Complete   | 2026-03-20 |
-| 3. Real-Time Consultation | 5/7 | In Progress|  |
-| 4. Prescriptions | 0/TBD | Not started | - |
+| 3. Real-Time Consultation | 7/7 | Complete   | 2026-03-20 |
+| 4. Prescriptions | 0/4 | Not started | - |
 | 5. Admin Panel | 0/TBD | Not started | - |
