@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Video } from "lucide-react";
 import {
   Tabs,
   TabsList,
@@ -50,9 +53,37 @@ function formatDateTime(isoString: string): string {
 interface AppointmentEntryProps {
   appointment: AppointmentOut;
   showDate?: boolean;
+  isPast?: boolean;
 }
 
-function AppointmentEntry({ appointment, showDate = false }: AppointmentEntryProps) {
+function AppointmentEntry({ appointment, showDate = false, isPast = false }: AppointmentEntryProps) {
+  const router = useRouter();
+  const [joining, setJoining] = useState(false);
+
+  const isJoinable =
+    appointment.status === "confirmed" &&
+    new Date(appointment.slot_datetime).getTime() <= Date.now() &&
+    !isPast;
+
+  async function handleJoinConsultation() {
+    setJoining(true);
+    try {
+      const res = await apiFetch("/consultations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appointment_id: appointment.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        router.push(`/doctor/consultations/${data.id}`);
+      } else {
+        setJoining(false);
+      }
+    } catch {
+      setJoining(false);
+    }
+  }
+
   return (
     <div className="flex items-center gap-4 py-3">
       <div className="w-12 shrink-0 text-right">
@@ -67,13 +98,24 @@ function AppointmentEntry({ appointment, showDate = false }: AppointmentEntryPro
           {appointment.patient_name ?? "Unknown Patient"}
         </p>
       </div>
-      <div className="shrink-0">
+      <div className="shrink-0 flex items-center gap-2">
         {appointment.status === "pending" ? (
           <Badge className="bg-amber-100 text-amber-800 border border-amber-200">
             Pending
           </Badge>
         ) : (
           <Badge variant="outline">Confirmed</Badge>
+        )}
+        {isJoinable && (
+          <Button
+            size="sm"
+            className="bg-[#0EA5E9] hover:bg-[#0EA5E9]/90 text-white text-sm ml-2"
+            onClick={handleJoinConsultation}
+            disabled={joining}
+          >
+            <Video className="size-4 mr-1" />
+            {joining ? "Joining..." : "Join Consultation"}
+          </Button>
         )}
       </div>
     </div>
@@ -86,12 +128,14 @@ function AppointmentList({
   emptyHeading,
   emptyBody,
   showDate = false,
+  isPast = false,
 }: {
   appointments: AppointmentOut[];
   loading: boolean;
   emptyHeading: string;
   emptyBody?: string;
   showDate?: boolean;
+  isPast?: boolean;
 }) {
   if (loading) {
     return (
@@ -118,7 +162,7 @@ function AppointmentList({
     <div className="mt-4">
       {appointments.map((appt, idx) => (
         <div key={appt.id}>
-          <AppointmentEntry appointment={appt} showDate={showDate} />
+          <AppointmentEntry appointment={appt} showDate={showDate} isPast={isPast} />
           {idx < appointments.length - 1 && <Separator />}
         </div>
       ))}
@@ -174,6 +218,7 @@ export default function DoctorAppointments() {
             loading={loading}
             emptyHeading="No appointments today"
             emptyBody="You have no scheduled appointments for today. Check your upcoming schedule below."
+            isPast={activeTab === "past"}
           />
         </TabsContent>
 
@@ -183,6 +228,7 @@ export default function DoctorAppointments() {
             loading={loading}
             emptyHeading="No upcoming appointments"
             showDate={true}
+            isPast={activeTab === "past"}
           />
         </TabsContent>
 
@@ -192,6 +238,7 @@ export default function DoctorAppointments() {
             loading={loading}
             emptyHeading="No past appointments"
             showDate={true}
+            isPast={activeTab === "past"}
           />
         </TabsContent>
       </Tabs>
