@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-03-20T16:01:15.821Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-03-20T16:22:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 18
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -56,6 +56,7 @@ Plan: 1 of 7
 | Phase 02-doctor-discovery-and-appointments P04 | 20 | 2 tasks | 6 files |
 | Phase 03-real-time-consultation P01 | 20 min | 2 tasks | 6 files |
 | Phase 03-real-time-consultation P03 | 10 min | 2 tasks | 5 files |
+| Phase 03-real-time-consultation P02 | 24 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,9 @@ Recent decisions affecting current work:
 - [Phase 03-real-time-consultation]: AccountStatus.active used in test fixtures (not .approved — enum values are pending_verification, pending_approval, active, suspended)
 - [Phase 03]: useRef typed with explicit undefined initial value (useRef<T | undefined>(undefined)) to satisfy TypeScript strict mode — calling useRef<T>() with no args fails strict null checks
 - [Phase 03]: WebRTC: isPolite = role === 'patient' — patient rolls back on offer collision, doctor wins as impolite peer per MDN perfect negotiation pattern
+- [Phase 03-02]: ws.py uses direct AsyncSessionLocal import; conftest must patch ws_module.AsyncSessionLocal (not just app_db) to redirect WebSocket DB to test SQLite
+- [Phase 03-02]: ConsultationManager singleton uses local relay fallback when Redis unavailable — no Redis required for dev/test single-worker mode
+- [Phase 03-02]: File download uses FileResponse (not StaticFiles) — PHI content must be auth-gated, not publicly served
 
 ### Pending Todos
 
@@ -105,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T16:01:15.815Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-03-20T16:22:00.000Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
