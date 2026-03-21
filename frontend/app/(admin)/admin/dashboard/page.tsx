@@ -10,44 +10,35 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Pencil } from "lucide-react";
+import { toast } from "sonner";
 
-interface Application {
-  id: number;
-  full_name: string;
-  email: string;
-  role: string;
-  account_status: string;
-  created_at: string;
-}
-
-function roleBadgeClass(role: string): string {
-  if (role === "doctor") return "border-blue-400 text-blue-700";
-  if (role === "pharmacist") return "border-teal-400 text-teal-700";
-  return "";
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+interface AdminStats {
+  total_users: number;
+  by_role: Record<string, number>;
+  pending_applications: number;
+  commission_rate: number;
 }
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [applications, setApplications] = useState<Application[]>([]);
+  const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [rateInput, setRateInput] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    async function fetchApplications() {
+    async function fetchStats() {
       try {
-        const res = await apiFetch("/admin/applications");
+        const res = await apiFetch("/admin/stats");
         if (res.ok) {
-          const data: Application[] = await res.json();
-          setApplications(data);
+          const data: AdminStats = await res.json();
+          setStats(data);
+          setRateInput(String(data.commission_rate));
         }
       } catch {
         // Silent fail — show empty state
@@ -55,20 +46,125 @@ export default function AdminDashboard() {
         setLoading(false);
       }
     }
-    fetchApplications();
+    fetchStats();
   }, []);
+
+  async function handleSaveCommission() {
+    setSaving(true);
+    try {
+      const res = await apiFetch("/admin/settings/commission", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commission_rate: parseFloat(rateInput) }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStats(prev =>
+          prev ? { ...prev, commission_rate: data.commission_rate } : prev
+        );
+        setEditMode(false);
+        toast.success("Commission rate updated.");
+      } else {
+        toast.error("Failed to update commission rate. Please try again.");
+      }
+    } catch {
+      toast.error("Failed to update commission rate. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div>
       <h1 className="text-xl font-semibold text-[#0F172A] mb-6">
-        Pending Applications
+        Admin Dashboard
       </h1>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Total Users */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-semibold text-[#0F172A]">
+            <CardTitle className="text-sm font-semibold text-[#0F172A]">
+              Total Users
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-8 w-12" />
+            ) : (
+              <p className="text-3xl font-semibold text-[#0EA5E9]">
+                {stats?.total_users ?? 0}
+              </p>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => router.push("/admin/users")}
+            >
+              View All Users
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Patients */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold text-[#0F172A]">
+              Patients
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-8 w-12" />
+            ) : (
+              <p className="text-3xl font-semibold text-[#0F172A]">
+                {stats?.by_role?.patient ?? 0}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Card 3: Doctors */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold text-[#0F172A]">
+              Doctors
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-8 w-12" />
+            ) : (
+              <p className="text-3xl font-semibold text-[#0F172A]">
+                {stats?.by_role?.doctor ?? 0}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Card 4: Pharmacists */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold text-[#0F172A]">
+              Pharmacists
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-8 w-12" />
+            ) : (
+              <p className="text-3xl font-semibold text-[#0F172A]">
+                {stats?.by_role?.pharmacist ?? 0}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Card 5: Pending Applications */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold text-[#0F172A]">
               Pending Applications
             </CardTitle>
           </CardHeader>
@@ -77,7 +173,7 @@ export default function AdminDashboard() {
               <Skeleton className="h-8 w-12" />
             ) : (
               <p className="text-3xl font-semibold text-[#0EA5E9]">
-                {applications.length}
+                {stats?.pending_applications ?? 0}
               </p>
             )}
             <Button
@@ -91,75 +187,71 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
+        {/* Card 6: Platform Settings (Commission) */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-semibold text-[#0F172A]">
-              User Management
+            <CardTitle className="text-sm font-semibold text-[#0F172A]">
+              Platform Settings
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-[#64748B]">
-              View and manage all registered users.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3"
-              onClick={() => router.push("/admin/users")}
-            >
-              View All Users
-            </Button>
+            {loading ? (
+              <Skeleton className="h-8 w-12" />
+            ) : !editMode ? (
+              <>
+                <p className="text-3xl font-semibold text-[#0EA5E9]">
+                  {stats?.commission_rate ?? 0}%
+                </p>
+                <p className="text-sm text-[#64748B] mt-1">
+                  {stats?.commission_rate ?? 0}% platform commission
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => setEditMode(true)}
+                >
+                  <Pencil className="h-4 w-4 mr-1" /> Edit
+                </Button>
+              </>
+            ) : (
+              <>
+                <Label htmlFor="commission-rate">Commission Rate (%)</Label>
+                <Input
+                  id="commission-rate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={rateInput}
+                  onChange={e => setRateInput(e.target.value)}
+                  className="mt-1"
+                />
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    size="sm"
+                    className="bg-[#0EA5E9] text-white hover:bg-[#0284C7]"
+                    disabled={saving}
+                    onClick={handleSaveCommission}
+                  >
+                    {saving ? "Saving..." : "Save Rate"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setRateInput(String(stats?.commission_rate ?? 0));
+                      setEditMode(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      {/* Recent pending applications list */}
-      {loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-14 w-full rounded-lg" />
-          ))}
-        </div>
-      ) : applications.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-base font-semibold text-[#0F172A]">
-            No pending applications
-          </p>
-          <p className="text-sm text-[#64748B] mt-1">
-            All doctor and pharmacist applications have been reviewed.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {applications.map((app) => (
-            <div
-              key={app.id}
-              className="flex items-center justify-between rounded-lg border border-[#E2E8F0] bg-white px-4 py-3 gap-4"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[#0F172A] truncate">
-                    {app.full_name}
-                  </p>
-                  <p className="text-xs text-[#64748B]">
-                    {formatDate(app.created_at)}
-                  </p>
-                </div>
-                <Badge variant="outline" className={roleBadgeClass(app.role)}>
-                  {app.role === "doctor" ? "Doctor" : "Pharmacist"}
-                </Badge>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => router.push("/admin/applications")}
-              >
-                Review Application
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
