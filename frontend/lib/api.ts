@@ -47,5 +47,20 @@ export async function apiFetch(
     }
   }
 
+  // Redirect suspended users to the suspended page
+  if (response.status === 403) {
+    try {
+      const cloned = response.clone();
+      const body = await cloned.json();
+      if (body.detail && typeof body.detail === "string" && body.detail.toLowerCase().includes("suspended")) {
+        clearAccessToken();
+        clearAuthSessionCookie();
+        window.location.href = "/suspended";
+      }
+    } catch {
+      // Not JSON or no detail — ignore, let caller handle
+    }
+  }
+
   return response;
 }

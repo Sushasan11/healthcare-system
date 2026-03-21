@@ -13,6 +13,7 @@ const PUBLIC_PATHS = [
   "/verify-email",
   "/forgot-password",
   "/pending-approval",
+  "/suspended",
 ];
 
 export default async function proxy(request: NextRequest) {
