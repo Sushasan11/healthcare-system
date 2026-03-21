@@ -36,13 +36,15 @@ async def get_current_user(
         raise credentials_exception
 
     user = await db.get(User, int(sub))
-    if user is None or not user.is_active:
+    if user is None:
         raise credentials_exception
     if user.account_status == AccountStatus.suspended:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account suspended.",
         )
+    if not user.is_active:
+        raise credentials_exception
     return user
 
 

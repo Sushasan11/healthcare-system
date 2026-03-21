@@ -2,10 +2,12 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.user import UserAdminOut
+
 
 class UserAdminPaginatedOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    users: list  # list of UserAdminOut dicts
+    users: list[UserAdminOut]
     total: int
 
 
