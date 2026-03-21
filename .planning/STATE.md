@@ -3,13 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 04-prescriptions-04-03-PLAN.md
-last_updated: "2026-03-20T19:11:06.456Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-21T12:26:42.075Z"
+last_activity: 2026-03-21
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 22
-  completed_plans: 21
+  completed_phases: 4
+  total_plans: 25
+  completed_plans: 23
 ---
 
 # Project State
@@ -19,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** A patient can discover a doctor, book an appointment, have a real-time consultation (chat → call → video escalation), receive a prescription, and buy medicines — all in one seamless flow.
-**Current focus:** Phase 04 — prescriptions
+**Current focus:** Phase 05 — admin-panel
 
 ## Current Position
 
-Phase: 04 (prescriptions) — EXECUTING
-Plan: 4 of 4
+Phase: 05 (admin-panel) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -64,6 +65,8 @@ Plan: 4 of 4
 | Phase 04-prescriptions P01 | 18 | 2 tasks | 12 files |
 | Phase 04-prescriptions P02 | 20 min | 2 tasks | 7 files |
 | Phase 04-prescriptions P03 | 15 | 2 tasks | 10 files |
+| Phase 04-prescriptions P04 | 8 min | 2 tasks | 6 files |
+| Phase 05-admin-panel P01 | 8 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -117,6 +120,10 @@ Recent decisions affecting current work:
 - [Phase 04-02]: POST /consultations returns HTTP 201 (fixed from 200) to match expected semantics
 - [Phase 04-03]: DrugAutocomplete uses plain input + absolute div dropdown (no third-party combobox) for consistency with existing codebase
 - [Phase 04-03]: NotificationPanel is self-contained (fetches own data on mount) for simplest integration into TopBar layout
+- [Phase 04-prescriptions]: Patient and doctor prescription detail pages use React use(params) hook — client components cannot be async so await params is not valid
+- [Phase 04-prescriptions]: Write Prescription button conditionally shown: user role is doctor AND consultation status is active
+- [Phase 05-admin-panel]: UserAdminPaginatedOut.users typed as list[UserAdminOut] not plain list — Pydantic v2 cannot serialize ORM objects from a plain list type
+- [Phase 05-admin-panel]: Suspended check in get_current_user placed before is_active check — suspended users set is_active=False, ordering matters to return 403 not 401
 
 ### Pending Todos
 
@@ -127,8 +134,14 @@ None yet.
 - **Payment processor unresolved:** Corepay, PayKings, and PayDiverse all need AUP and SDK verification before Phase 2 payment integration begins. Resolve in Phase 1 planning.
 - **Jurisdiction for e-prescriptions:** Which jurisdiction's telemedicine and e-prescription regulations apply has not been confirmed. Affects Phase 4 prescription design.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260321-2o9 | Write Readme.md | 2026-03-20 | d3dd60b | [260321-2o9-write-readme-md](./quick/260321-2o9-write-readme-md/) |
+
 ## Session Continuity
 
-Last session: 2026-03-20T19:11:06.449Z
-Stopped at: Completed 04-prescriptions-04-03-PLAN.md
+Last activity: 2026-03-21
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None

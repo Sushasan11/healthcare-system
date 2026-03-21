@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Foundation** - Monorepo scaffold, auth for all 4 roles, PHI-safe data model, Redis infrastructure
 - [x] **Phase 2: Doctor Discovery and Appointments** - Doctor profiles, availability management, patient search, appointment booking (completed 2026-03-20)
 - [x] **Phase 3: Real-Time Consultation** - WebSocket chat, WebRTC audio/video escalation within one session (completed 2026-03-20)
-- [ ] **Phase 4: Prescriptions** - Doctor prescription writing, patient prescription records
+- [x] **Phase 4: Prescriptions** - Doctor prescription writing, patient prescription records (completed 2026-03-20)
 - [ ] **Phase 5: Admin Panel** - User management, doctor verification, commission configuration
 
 ## Phase Details
@@ -87,13 +87,13 @@ Plans:
   1. A doctor can open a prescription form during or after a consultation and write a structured prescription (medicine name, dosage, instructions) that is saved and linked to the consultation
   2. A patient can navigate to their prescription history and view all past prescriptions with the issuing doctor, date, and medicine details
   3. A prescription cannot be accessed or viewed by any user other than the issuing doctor and the patient it was issued to
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 04-01-PLAN.md — Backend models (Prescription, PrescriptionItem, Drug, Notification), schemas, HMAC utility, PDF service, drug seed data, test scaffold
 - [x] 04-02-PLAN.md — Backend API routers (prescriptions CRUD + PDF, drugs autocomplete, notifications, consultation reopen) with integration tests
 - [x] 04-03-PLAN.md — Frontend TypeScript types, prescription components (Form, Card, Detail, DrugAutocomplete, MedicineRow), NotificationPanel, Sidebar and TopBar updates
-- [ ] 04-04-PLAN.md — Frontend prescription pages (patient list/detail, doctor list/detail, pharmacist placeholder), ConsultationRoom Write Prescription integration
+- [x] 04-04-PLAN.md — Frontend prescription pages (patient list/detail, doctor list/detail, pharmacist placeholder), ConsultationRoom Write Prescription integration
 
 ### Phase 5: Admin Panel
 **Goal**: An admin can exercise full oversight of the platform — managing users across roles, verifying doctor applications, and setting commission rates
@@ -103,7 +103,12 @@ Plans:
   1. An admin can view a list of all users on the platform, filter by role, and suspend or activate any account
   2. An admin can review a pending doctor registration application and approve or reject it, with the outcome reflected immediately in the doctor's access
   3. An admin can set platform commission rates and the new rate is applied to subsequent transactions
-**Plans**: TBD
+**Plans:** 1/3 plans executed
+
+Plans:
+- [x] 05-01-PLAN.md — Backend: admin schemas, rejection_reason migration, extended endpoints (paginated users, suspend/activate, stats, commission CRUD), suspended auth check, integration tests
+- [ ] 05-02-PLAN.md — Frontend: enhanced users page (role filter, pagination, suspend/activate with toast), suspended page, proxy update, apiFetch 403 redirect
+- [ ] 05-03-PLAN.md — Frontend: enhanced dashboard (stats grid, commission inline edit), enhanced applications page (profile summary card, rejection reason two-step flow)
 
 ## Progress
 
@@ -115,5 +120,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Foundation | 5/6 | In Progress|  |
 | 2. Doctor Discovery and Appointments | 5/5 | Complete   | 2026-03-20 |
 | 3. Real-Time Consultation | 7/7 | Complete   | 2026-03-20 |
-| 4. Prescriptions | 3/4 | In Progress|  |
-| 5. Admin Panel | 0/TBD | Not started | - |
+| 4. Prescriptions | 4/4 | Complete   | 2026-03-20 |
+| 5. Admin Panel | 1/3 | In Progress|  |

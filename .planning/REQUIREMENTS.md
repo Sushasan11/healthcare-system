@@ -33,14 +33,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Prescriptions
 
-- [ ] **PRSC-01**: Doctor can write a structured digital prescription during or after consultation
-- [ ] **PRSC-02**: Patient can view all past prescriptions linked to consultations
+- [x] **PRSC-01**: Doctor can write a structured digital prescription during or after consultation
+- [x] **PRSC-02**: Patient can view all past prescriptions linked to consultations
 
 ### Admin
 
-- [ ] **ADMN-01**: Admin can view and manage all users across roles (view, suspend, activate)
-- [ ] **ADMN-02**: Admin can review and approve/reject doctor registration applications
-- [ ] **ADMN-03**: Admin can configure platform commission rates
+- [x] **ADMN-01**: Admin can view and manage all users across roles (view, suspend, activate)
+- [x] **ADMN-02**: Admin can review and approve/reject doctor registration applications
+- [x] **ADMN-03**: Admin can configure platform commission rates
 
 ## v2 Requirements
 
@@ -107,11 +107,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONS-01 | Phase 3 | Complete |
 | CONS-02 | Phase 3 | Complete |
 | CONS-03 | Phase 3 | Complete |
-| PRSC-01 | Phase 4 | Pending |
-| PRSC-02 | Phase 4 | Pending |
-| ADMN-01 | Phase 5 | Pending |
-| ADMN-02 | Phase 5 | Pending |
-| ADMN-03 | Phase 5 | Pending |
+| PRSC-01 | Phase 4 | Complete |
+| PRSC-02 | Phase 4 | Complete |
+| ADMN-01 | Phase 5 | Complete |
+| ADMN-02 | Phase 5 | Complete |
+| ADMN-03 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 17 total
