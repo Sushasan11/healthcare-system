@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-21T12:26:42.075Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-21T12:34:31.667Z"
 last_activity: 2026-03-21
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 25
-  completed_plans: 23
+  completed_plans: 25
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-19)
 ## Current Position
 
 Phase: 05 (admin-panel) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -67,6 +67,8 @@ Plan: 2 of 3
 | Phase 04-prescriptions P03 | 15 | 2 tasks | 10 files |
 | Phase 04-prescriptions P04 | 8 min | 2 tasks | 6 files |
 | Phase 05-admin-panel P01 | 8 min | 2 tasks | 6 files |
+| Phase 05-admin-panel P02 | 4 min | 2 tasks | 4 files |
+| Phase 05-admin-panel P03 | 5 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -124,6 +126,8 @@ Recent decisions affecting current work:
 - [Phase 04-prescriptions]: Write Prescription button conditionally shown: user role is doctor AND consultation status is active
 - [Phase 05-admin-panel]: UserAdminPaginatedOut.users typed as list[UserAdminOut] not plain list — Pydantic v2 cannot serialize ORM objects from a plain list type
 - [Phase 05-admin-panel]: Suspended check in get_current_user placed before is_active check — suspended users set is_active=False, ordering matters to return 403 not 401
+- [Phase 05-02]: Plain <select> for role filter instead of shadcn Select to avoid Suspense issues
+- [Phase 05-02]: 403 suspended redirect uses response.clone() so caller can still read the response body
 
 ### Pending Todos
 
@@ -143,5 +147,5 @@ None yet.
 ## Session Continuity
 
 Last activity: 2026-03-21
-Stopped at: Completed 05-01-PLAN.md
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
