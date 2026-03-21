@@ -23,7 +23,7 @@ async def get_current_user(
 ):
     """Decode access token and return the authenticated user."""
     # Import here to avoid circular imports (models import from db which is imported here)
-    from app.models.user import User
+    from app.models.user import User, AccountStatus
 
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
@@ -38,6 +38,11 @@ async def get_current_user(
     user = await db.get(User, int(sub))
     if user is None or not user.is_active:
         raise credentials_exception
+    if user.account_status == AccountStatus.suspended:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account suspended.",
+        )
     return user
 
 

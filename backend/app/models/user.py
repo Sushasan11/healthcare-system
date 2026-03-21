@@ -40,6 +40,7 @@ class User(Base):
     years_of_experience: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Shared optional fields
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    rejection_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
