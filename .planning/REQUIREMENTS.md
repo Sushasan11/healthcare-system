@@ -26,8 +26,8 @@ Requirements for e-pharmacy, payments, pharmacist dashboard, consultation histor
 - [x] **PAY-01**: Patient pays for consultation at booking
 - [x] **PAY-02**: Patient pays for medicine orders at checkout
 - [x] **PAY-03**: Platform deducts commission and credits net amount to doctor/pharmacist
-- [ ] **PAY-04**: Doctor and pharmacist can view earnings dashboard (earned, commission, payouts)
-- [ ] **PAY-05**: Patient receives receipt/invoice for consultations and medicine orders
+- [x] **PAY-04**: Doctor and pharmacist can view earnings dashboard (earned, commission, payouts)
+- [x] **PAY-05**: Patient receives receipt/invoice for consultations and medicine orders
 
 ### Pharmacist Dashboard
 
@@ -49,7 +49,7 @@ Requirements for e-pharmacy, payments, pharmacist dashboard, consultation histor
 
 ### Admin
 
-- [ ] **ADMIN-01**: Admin can view all transactions with commission totals
+- [x] **ADMIN-01**: Admin can view all transactions with commission totals
 
 ## Future Requirements
 
@@ -87,9 +87,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PAY-01 | Phase 6: Payment Foundation | Complete |
 | PAY-02 | Phase 6: Payment Foundation | Complete |
 | PAY-03 | Phase 6: Payment Foundation | Complete |
-| PAY-04 | Phase 6: Payment Foundation | Pending |
-| PAY-05 | Phase 6: Payment Foundation | Pending |
-| ADMIN-01 | Phase 6: Payment Foundation | Pending |
+| PAY-04 | Phase 6: Payment Foundation | Complete |
+| PAY-05 | Phase 6: Payment Foundation | Complete |
+| ADMIN-01 | Phase 6: Payment Foundation | Complete |
 | RXORD-01 | Phase 7: Prescription-Linked Ordering | Pending |
 | RXORD-02 | Phase 7: Prescription-Linked Ordering | Pending |
 | RXORD-03 | Phase 7: Prescription-Linked Ordering | Pending |

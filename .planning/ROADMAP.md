@@ -42,8 +42,8 @@
 **Plans:** 5 plans
 Plans:
 - [x] 06-01-PLAN.md — Payment models, migration, PaymentService, schemas, and test scaffold
-- [ ] 06-02-PLAN.md — Appointment booking payment integration and receipt endpoint
-- [ ] 06-03-PLAN.md — Pharmacy order stub, invoice endpoint, and admin transactions endpoint
+- [x] 06-02-PLAN.md — Appointment booking payment integration and receipt endpoint
+- [x] 06-03-PLAN.md — Pharmacy order stub, invoice endpoint, and admin transactions endpoint
 - [ ] 06-04-PLAN.md — Frontend booking payment CTA and appointment detail with receipt
 - [ ] 06-05-PLAN.md — Frontend earnings dashboard and admin transactions page
 
