@@ -1,124 +1,119 @@
 # Roadmap: HealthConnect
 
-## Overview
+## Milestones
 
-HealthConnect is built in five phases that follow the dependency chain of the core value loop: authenticate users → enable doctor discovery and appointment booking → deliver real-time consultation → issue and view prescriptions → give admins platform control. Each phase delivers a complete, independently verifiable capability. No phase is started until the one before it is observable and working.
+- ✅ **v1.0 MVP** — Phases 1-5 (shipped 2026-03-21)
+- 🔄 **v2.0 E-Pharmacy & Payments** — Phases 6-11 (active)
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+<details>
+<summary>✅ v1.0 MVP (Phases 1-5) — SHIPPED 2026-03-21</summary>
 
-Decimal phases appear between their surrounding integers in numeric order.
+- [x] Phase 1: Foundation (6/6 plans) — completed 2026-03-20
+- [x] Phase 2: Doctor Discovery and Appointments (5/5 plans) — completed 2026-03-20
+- [x] Phase 3: Real-Time Consultation (7/7 plans) — completed 2026-03-20
+- [x] Phase 4: Prescriptions (4/4 plans) — completed 2026-03-20
+- [x] Phase 5: Admin Panel (3/3 plans) — completed 2026-03-21
 
-- [ ] **Phase 1: Foundation** - Monorepo scaffold, auth for all 4 roles, PHI-safe data model, Redis infrastructure
-- [x] **Phase 2: Doctor Discovery and Appointments** - Doctor profiles, availability management, patient search, appointment booking (completed 2026-03-20)
-- [x] **Phase 3: Real-Time Consultation** - WebSocket chat, WebRTC audio/video escalation within one session (completed 2026-03-20)
-- [x] **Phase 4: Prescriptions** - Doctor prescription writing, patient prescription records (completed 2026-03-20)
-- [x] **Phase 5: Admin Panel** - User management, doctor verification, commission configuration (completed 2026-03-21)
+</details>
+
+### v2.0 E-Pharmacy & Payments
+
+- [ ] **Phase 6: Payment Foundation** — Payment collection, commission splitting, earnings dashboards, and admin transaction ledger
+- [ ] **Phase 7: Prescription-Linked Ordering** — Patient orders medicines from consultation Rx; pharmacist receives, verifies, and fulfills the order
+- [ ] **Phase 8: Pharmacist Inventory** — Pharmacist manages the medicine catalog and stock counts that enable browsable OTC listings
+- [ ] **Phase 9: OTC Medicine Store** — Patient browses, searches, and buys medicines without a prescription
+- [ ] **Phase 10: Appointment Notifications** — Booking confirmations, 24h/1h reminders, and cancellation/reschedule alerts via Celery
+- [ ] **Phase 11: Consultation History** — Patient and doctor view past consultation list and per-consultation chat transcript
 
 ## Phase Details
 
-### Phase 1: Foundation
-**Goal**: A secure, HIPAA-aware platform foundation exists that all four user roles can authenticate into
-**Depends on**: Nothing (first phase)
-**Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04
+### Phase 6: Payment Foundation
+**Goal**: The platform can collect payments, deduct commission, and credit net earnings to providers — before any commerce feature goes live
+**Depends on**: Phase 5 (existing commission KVStore and admin panel)
+**Requirements**: PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, ADMIN-01
 **Success Criteria** (what must be TRUE):
-  1. A new user can register with email and password and choose a role (patient, doctor, pharmacist, or admin)
-  2. A logged-in user's session persists across browser refresh without being asked to log in again
-  3. A logged-out user visiting any protected route is redirected to the login page
-  4. A user with the wrong role (e.g., a patient accessing the doctor dashboard) is blocked with an appropriate error
-  5. Patient medical data in the database is stored encrypted at rest, not in plain text
-**Plans:** 6 plans
-
+  1. Patient is charged the consultation fee at the moment of appointment booking and receives a receipt
+  2. Patient is charged for a medicine order at checkout and receives an itemized invoice
+  3. Platform commission is automatically deducted and the net amount is recorded to the doctor or pharmacist ledger
+  4. Doctor and pharmacist can view an earnings dashboard showing gross earned, commission deducted, and net payable
+  5. Admin can view a paginated transaction list with per-transaction commission amounts and running totals
+**Plans:** 5 plans
 Plans:
-- [ ] 01-01-PLAN.md — Backend scaffold: config, DB models with PHI encryption, Redis, JWT/security utilities, test infrastructure
-- [ ] 01-02-PLAN.md — Frontend scaffold: Next.js 16, shadcn/ui, Sidebar, TopBar, proxy.ts RBAC, role layouts
-- [ ] 01-03-PLAN.md — Auth API: registration, login, session, logout, lockout, email verification, admin endpoints, test suite
-- [ ] 01-04-PLAN.md — Frontend auth pages: login, registration forms, email verification, forgot password, pending approval
-- [ ] 01-05-PLAN.md — Dashboard pages, patient profile editing, admin applications management, end-to-end verification
-- [ ] 01-06-PLAN.md — Gap closure: fix session persistence across browser refresh (AUTH-02)
+- [x] 06-01-PLAN.md — Payment models, migration, PaymentService, schemas, and test scaffold
+- [ ] 06-02-PLAN.md — Appointment booking payment integration and receipt endpoint
+- [ ] 06-03-PLAN.md — Pharmacy order stub, invoice endpoint, and admin transactions endpoint
+- [ ] 06-04-PLAN.md — Frontend booking payment CTA and appointment detail with receipt
+- [ ] 06-05-PLAN.md — Frontend earnings dashboard and admin transactions page
 
-### Phase 2: Doctor Discovery and Appointments
-**Goal**: A patient can find a doctor and book a time slot; a doctor can manage their schedule and see their upcoming work
-**Depends on**: Phase 1
-**Requirements**: DISC-01, DISC-02, DISC-03, APPT-01, APPT-02
+### Phase 7: Prescription-Linked Ordering
+**Goal**: Patient can order the exact medicines on a completed consultation prescription, and the pharmacist can verify and fulfill that order through a queue
+**Depends on**: Phase 6 (payment collection at checkout)
+**Requirements**: RXORD-01, RXORD-02, RXORD-03, RXORD-04, PHARM-01, PHARM-03, PHARM-04
 **Success Criteria** (what must be TRUE):
-  1. A doctor can create a profile with specialty, qualifications, bio, and consultation fee, and the profile is publicly visible
-  2. A patient can search and filter the doctor listing by specialty and see only doctors with available slots
-  3. A doctor can set working hours and block specific time slots so they no longer appear bookable
-  4. A patient can select an available time slot and confirm a booking, and the slot is no longer available to other patients
-  5. A doctor can view their upcoming appointments dashboard showing patient name, time, and appointment details
-**Plans:** 5/5 plans complete
+  1. Patient sees an "Order Prescribed Medicines" action on a completed consultation; the cart is pre-filled with drug name, quantity, and dosage from the prescription
+  2. A prescription can only be ordered once — attempting to re-order a used prescription shows a clear error
+  3. Patient can track their order status through received, verified, dispatched, and delivered stages
+  4. Pharmacist sees all incoming prescription orders in a queue with the attached Rx details visible
+  5. Pharmacist can advance an order through fulfillment stages or reject it with a reason, and the patient is notified of rejection
+**Plans**: TBD
 
-Plans:
-- [ ] 02-01-PLAN.md — Backend models, migrations, schemas, and slot generator service
-- [ ] 02-02-PLAN.md — Backend API routers (doctors, availability, appointments) with integration tests
-- [ ] 02-03-PLAN.md — Frontend doctor listing, profile detail, profile edit, sidebar navigation updates
-- [ ] 02-04-PLAN.md — Frontend doctor schedule management and patient booking confirmation flow
-- [ ] 02-05-PLAN.md — Frontend appointment views for patient and doctor, dashboard integration
-
-### Phase 3: Real-Time Consultation
-**Goal**: A patient and doctor connected by an appointment can consult in real time via chat with on-demand escalation to audio and video
-**Depends on**: Phase 2
-**Requirements**: CONS-01, CONS-02, CONS-03
+### Phase 8: Pharmacist Inventory
+**Goal**: Pharmacist has a functional inventory system so that medicine stock exists for the OTC store to surface to patients
+**Depends on**: Phase 7 (PharmacyProduct model and pharmacy order infrastructure from Rx ordering)
+**Requirements**: PHARM-02
 **Success Criteria** (what must be TRUE):
-  1. A patient and doctor can exchange text messages in a shared consultation room in real time with no noticeable lag
-  2. Either party can initiate an escalation to audio call within the same consultation session without navigating away
-  3. Either party can escalate a call to video within the same consultation session without disconnecting the audio
-  4. Consultation messaging works correctly when patient and doctor connect from different browser tabs or machines (multi-worker safe)
-**Plans:** 7/7 plans complete
+  1. Pharmacist can add new medicines to inventory with name, category, description, dosage, price, and stock count
+  2. Pharmacist can adjust stock counts (add or deduct) and the updated quantity is immediately reflected
+  3. Pharmacist sees a low-stock alert indicator on medicines that fall below the threshold
+**Plans**: TBD
 
-Plans:
-- [ ] 03-01-PLAN.md — Backend models, schemas, migration, and test scaffold for consultations
-- [ ] 03-02-PLAN.md — Backend WebSocket endpoint, Redis pub/sub manager, REST consultation endpoints, file upload
-- [ ] 03-03-PLAN.md — Frontend TypeScript types, WebSocket hook, WebRTC hook, call timer, notifications
-- [ ] 03-04a-PLAN.md — Frontend consultation sub-components (MessageBubble, ReadReceipt, TimerBar, etc.)
-- [ ] 03-04b-PLAN.md — Frontend ConsultationRoom container, ChatPanel, VideoPanel, CallModal, route pages
-- [ ] 03-05-PLAN.md — Frontend consultation list pages and sidebar navigation updates
-- [ ] 03-06-PLAN.md — "Join Consultation" entry point on appointment cards for patient and doctor
-
-### Phase 4: Prescriptions
-**Goal**: A doctor can issue a structured digital prescription at the end of a consultation, and the patient can access all their past prescriptions
-**Depends on**: Phase 3
-**Requirements**: PRSC-01, PRSC-02
+### Phase 9: OTC Medicine Store
+**Goal**: Patient can browse, search, and purchase medicines without a prescription through a self-service store
+**Depends on**: Phase 6 (payment at checkout), Phase 8 (medicine inventory populated by pharmacist)
+**Requirements**: OTC-01, OTC-02, OTC-03, OTC-04
 **Success Criteria** (what must be TRUE):
-  1. A doctor can open a prescription form during or after a consultation and write a structured prescription (medicine name, dosage, instructions) that is saved and linked to the consultation
-  2. A patient can navigate to their prescription history and view all past prescriptions with the issuing doctor, date, and medicine details
-  3. A prescription cannot be accessed or viewed by any user other than the issuing doctor and the patient it was issued to
-**Plans:** 4/4 plans complete
+  1. Patient can browse medicines filtered by category and sees only in-stock, non-prescription-required items
+  2. Patient can search medicines by name and see matching results with price and stock status
+  3. Patient can view a medicine detail page showing name, description, dosage, price, and current stock
+  4. Patient can add medicines to cart, adjust quantities, complete checkout with payment, and receive an order confirmation
+**Plans**: TBD
 
-Plans:
-- [x] 04-01-PLAN.md — Backend models (Prescription, PrescriptionItem, Drug, Notification), schemas, HMAC utility, PDF service, drug seed data, test scaffold
-- [x] 04-02-PLAN.md — Backend API routers (prescriptions CRUD + PDF, drugs autocomplete, notifications, consultation reopen) with integration tests
-- [x] 04-03-PLAN.md — Frontend TypeScript types, prescription components (Form, Card, Detail, DrugAutocomplete, MedicineRow), NotificationPanel, Sidebar and TopBar updates
-- [x] 04-04-PLAN.md — Frontend prescription pages (patient list/detail, doctor list/detail, pharmacist placeholder), ConsultationRoom Write Prescription integration
-
-### Phase 5: Admin Panel
-**Goal**: An admin can exercise full oversight of the platform — managing users across roles, verifying doctor applications, and setting commission rates
-**Depends on**: Phase 2
-**Requirements**: ADMN-01, ADMN-02, ADMN-03
+### Phase 10: Appointment Notifications
+**Goal**: Patient and doctor receive timely automated notifications for booking events and appointment reminders without manual intervention
+**Depends on**: Phase 6 (booking payment triggers confirmation), Phase 7 (order rejection notification pattern)
+**Requirements**: NOTIF-01, NOTIF-02, NOTIF-03
 **Success Criteria** (what must be TRUE):
-  1. An admin can view a list of all users on the platform, filter by role, and suspend or activate any account
-  2. An admin can review a pending doctor registration application and approve or reject it, with the outcome reflected immediately in the doctor's access
-  3. An admin can set platform commission rates and the new rate is applied to subsequent transactions
-**Plans:** 3/3 plans complete
+  1. Patient and doctor each receive a booking confirmation notification immediately after an appointment is booked
+  2. Patient receives an in-app and email reminder 24 hours before the appointment and another 1 hour before
+  3. Patient and doctor both receive a notification when an appointment is cancelled or rescheduled
+  4. Reminders are not sent for appointments that have already been cancelled (no phantom reminders)
+**Plans**: TBD
 
-Plans:
-- [x] 05-01-PLAN.md — Backend: admin schemas, rejection_reason migration, extended endpoints (paginated users, suspend/activate, stats, commission CRUD), suspended auth check, integration tests
-- [x] 05-02-PLAN.md — Frontend: enhanced users page (role filter, pagination, suspend/activate with toast), suspended page, proxy update, apiFetch 403 redirect
-- [x] 05-03-PLAN.md — Frontend: enhanced dashboard (stats grid, commission inline edit), enhanced applications page (profile summary card, rejection reason two-step flow)
+### Phase 11: Consultation History
+**Goal**: Patient and doctor can review all past consultations and read the full chat transcript from any session
+**Depends on**: Phase 7 (prescription linkable from consultation detail)
+**Requirements**: HIST-01, HIST-02
+**Success Criteria** (what must be TRUE):
+  1. Patient can view a paginated list of all past consultations sorted by date, showing doctor name, date, and status
+  2. Doctor can view a paginated list of all past consultations sorted by date, showing patient name, date, and status
+  3. Patient and doctor can open any past consultation and read the full chat transcript in read-only mode
+  4. The linked prescription (if any) is visible from the consultation detail page
+**Plans**: TBD
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Foundation | 5/6 | In Progress|  |
-| 2. Doctor Discovery and Appointments | 5/5 | Complete   | 2026-03-20 |
-| 3. Real-Time Consultation | 7/7 | Complete   | 2026-03-20 |
-| 4. Prescriptions | 4/4 | Complete   | 2026-03-20 |
-| 5. Admin Panel | 3/3 | Complete   | 2026-03-21 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Foundation | v1.0 | 6/6 | Complete | 2026-03-20 |
+| 2. Doctor Discovery and Appointments | v1.0 | 5/5 | Complete | 2026-03-20 |
+| 3. Real-Time Consultation | v1.0 | 7/7 | Complete | 2026-03-20 |
+| 4. Prescriptions | v1.0 | 4/4 | Complete | 2026-03-20 |
+| 5. Admin Panel | v1.0 | 3/3 | Complete | 2026-03-21 |
+| 6. Payment Foundation | v2.0 | 0/5 | Planned | - |
+| 7. Prescription-Linked Ordering | v2.0 | 0/? | Not started | - |
+| 8. Pharmacist Inventory | v2.0 | 0/? | Not started | - |
+| 9. OTC Medicine Store | v2.0 | 0/? | Not started | - |
+| 10. Appointment Notifications | v2.0 | 0/? | Not started | - |
+| 11. Consultation History | v2.0 | 0/? | Not started | - |
