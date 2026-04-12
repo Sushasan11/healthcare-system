@@ -45,7 +45,7 @@ Plans:
 - [x] 06-02-PLAN.md — Appointment booking payment integration and receipt endpoint
 - [x] 06-03-PLAN.md — Pharmacy order stub, invoice endpoint, and admin transactions endpoint
 - [ ] 06-04-PLAN.md — Frontend booking payment CTA and appointment detail with receipt
-- [ ] 06-05-PLAN.md — Frontend earnings dashboard and admin transactions page
+- [x] 06-05-PLAN.md — Frontend earnings dashboard and admin transactions page
 
 ### Phase 7: Prescription-Linked Ordering
 **Goal**: Patient can order the exact medicines on a completed consultation prescription, and the pharmacist can verify and fulfill that order through a queue
