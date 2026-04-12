@@ -35,3 +35,5 @@ class AppointmentOut(BaseModel):
     created_at: datetime
     doctor_name: str | None = None
     patient_name: str | None = None
+    payment_status: str | None = None
+    payment_amount: str | None = None

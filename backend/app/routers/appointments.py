@@ -8,6 +8,7 @@ Endpoints:
 """
 
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -17,6 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user, require_role
 from app.db import get_db
 from app.models.appointment import Appointment, AppointmentStatus
+from app.models.doctor_profile import DoctorProfile
+from app.models.payment import Payment, PaymentStatus
 from app.models.user import AccountStatus, User, UserRole
 from app.schemas.appointment import (
     AppointmentCreate,
@@ -25,6 +28,7 @@ from app.schemas.appointment import (
     SlotHoldResponse,
 )
 from app.services.kv_store import KVStore
+from app.services.payment_service import PaymentService
 
 router = APIRouter(prefix="/appointments", tags=["appointments"])
 
@@ -48,10 +52,19 @@ async def release_slot_hold(kv: KVStore, doctor_id: int, slot_dt: datetime) -> N
     await kv.delete(f"slot_hold:{doctor_id}:{slot_dt.isoformat()}")
 
 
-def _build_appointment_out(appt: Appointment) -> AppointmentOut:
+def _build_appointment_out(
+    appt: Appointment, payment: Payment | None = None
+) -> AppointmentOut:
     """Build AppointmentOut from an Appointment with loaded relationships."""
     doctor_name = appt.doctor.full_name if appt.doctor else None
     patient_name = appt.patient.full_name if appt.patient else None
+    payment_status = None
+    payment_amount = None
+    if payment is not None:
+        payment_status = (
+            payment.status.value if hasattr(payment.status, "value") else payment.status
+        )
+        payment_amount = str(payment.gross_amount)
     return AppointmentOut(
         id=appt.id,
         patient_id=appt.patient_id,
@@ -62,6 +75,8 @@ def _build_appointment_out(appt: Appointment) -> AppointmentOut:
         created_at=appt.created_at,
         doctor_name=doctor_name,
         patient_name=patient_name,
+        payment_status=payment_status,
+        payment_amount=payment_amount,
     )
 
 
@@ -140,7 +155,18 @@ async def book_appointment(
             detail="Doctor not found or not active",
         )
 
-    # Create appointment
+    # Fetch doctor profile for consultation fee
+    profile_result = await db.execute(
+        select(DoctorProfile).where(DoctorProfile.user_id == data.doctor_id)
+    )
+    profile = profile_result.scalar_one_or_none()
+    if not profile or profile.consultation_fee is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Doctor has no consultation fee set",
+        )
+
+    # Create appointment first to obtain its id
     appointment = Appointment(
         patient_id=current_user.id,
         doctor_id=data.doctor_id,
@@ -149,8 +175,25 @@ async def book_appointment(
         reason_for_visit=data.reason_for_visit,
     )
     db.add(appointment)
+    await db.flush()
+
+    # Charge consultation fee (per D-01). PaymentService does not commit.
+    payment_service = PaymentService(db)
+    try:
+        payment = await payment_service.charge_consultation(
+            appointment_id=appointment.id,
+            patient_id=current_user.id,
+            provider_id=data.doctor_id,
+            gross_amount=Decimal(str(profile.consultation_fee)),
+        )
+    except ValueError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Payment could not be processed. Please try again.",
+        )
+
     await db.commit()
-    await db.refresh(appointment)
 
     # Release slot hold
     kv = KVStore(db)
@@ -163,7 +206,11 @@ async def book_appointment(
         .where(Appointment.id == appointment.id)
     )
     appt_with_rels = result.scalar_one()
-    return _build_appointment_out(appt_with_rels)
+    payment_result = await db.execute(
+        select(Payment).where(Payment.appointment_id == appt_with_rels.id)
+    )
+    payment_obj = payment_result.scalar_one_or_none()
+    return _build_appointment_out(appt_with_rels, payment=payment_obj)
 
 
 @router.get("", response_model=list[AppointmentOut])
@@ -215,7 +262,21 @@ async def list_appointments(
 
     result = await db.execute(query)
     appointments = result.scalars().all()
-    return [_build_appointment_out(a) for a in appointments]
+
+    appt_ids = [a.id for a in appointments]
+    if appt_ids:
+        payment_results = await db.execute(
+            select(Payment).where(Payment.appointment_id.in_(appt_ids))
+        )
+        payments_by_appt = {
+            p.appointment_id: p for p in payment_results.scalars().all()
+        }
+    else:
+        payments_by_appt = {}
+    return [
+        _build_appointment_out(a, payment=payments_by_appt.get(a.id))
+        for a in appointments
+    ]
 
 
 @router.delete("/{appointment_id}", response_model=AppointmentOut)
@@ -264,6 +325,15 @@ async def cancel_appointment(
             detail="Cannot cancel within 2 hours of appointment",
         )
 
+    # Refund payment if exists and completed (per D-03)
+    payment_result = await db.execute(
+        select(Payment).where(Payment.appointment_id == appointment_id)
+    )
+    existing_payment = payment_result.scalar_one_or_none()
+    if existing_payment and existing_payment.status == PaymentStatus.completed:
+        payment_service = PaymentService(db)
+        await payment_service.refund_payment(existing_payment)
+
     appointment.status = AppointmentStatus.cancelled
     await db.commit()
     await db.refresh(appointment)
@@ -275,4 +345,8 @@ async def cancel_appointment(
         .where(Appointment.id == appointment_id)
     )
     appt_with_rels = result.scalar_one()
-    return _build_appointment_out(appt_with_rels)
+    payment_reload = await db.execute(
+        select(Payment).where(Payment.appointment_id == appointment_id)
+    )
+    payment_obj = payment_reload.scalar_one_or_none()
+    return _build_appointment_out(appt_with_rels, payment=payment_obj)
