@@ -6,6 +6,8 @@ from app.models.consultation import Consultation, ConsultationStatus, Message
 from app.models.prescription import Prescription, PrescriptionItem, PrescriptionStatus, Drug
 from app.models.notification import Notification, NotificationType
 from app.models.kv_store import KeyValueEntry
+from app.models.payment import Payment, PaymentLedger, PaymentStatus, TransactionType  # noqa: F401
+from app.models.pharmacy_order import PharmacyOrder, PharmacyOrderItem, OrderStatus  # noqa: F401
 
 __all__ = [
     "User",
@@ -27,4 +29,11 @@ __all__ = [
     "Notification",
     "NotificationType",
     "KeyValueEntry",
+    "Payment",
+    "PaymentLedger",
+    "PaymentStatus",
+    "TransactionType",
+    "PharmacyOrder",
+    "PharmacyOrderItem",
+    "OrderStatus",
 ]

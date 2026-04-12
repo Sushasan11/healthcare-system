@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-21T12:34:31.667Z"
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-03-21T12:34:45.510Z"
 last_activity: 2026-03-21
 progress:
   total_phases: 5
@@ -128,6 +128,8 @@ Recent decisions affecting current work:
 - [Phase 05-admin-panel]: Suspended check in get_current_user placed before is_active check — suspended users set is_active=False, ordering matters to return 403 not 401
 - [Phase 05-02]: Plain <select> for role filter instead of shadcn Select to avoid Suspense issues
 - [Phase 05-02]: 403 suspended redirect uses response.clone() so caller can still read the response body
+- [Phase 05-admin-panel]: Dashboard fetches /admin/stats aggregate endpoint for all stat counts including commission_rate
+- [Phase 05-admin-panel]: Two-step rejection flow: Reject sets rejectingId, Confirm Reject calls API with optional rejection_reason JSON body
 
 ### Pending Todos
 
@@ -147,5 +149,5 @@ None yet.
 ## Session Continuity
 
 Last activity: 2026-03-21
-Stopped at: Completed 05-02-PLAN.md
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None
