@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pencil } from "lucide-react";
+import { Pencil, Receipt } from "lucide-react";
 import { toast } from "sonner";
 
 interface AdminStats {
@@ -183,6 +183,29 @@ export default function AdminDashboard() {
               onClick={() => router.push("/admin/applications")}
             >
               Review Applications
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Card: Transactions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold text-[#0F172A]">
+              Transactions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Receipt className="h-6 w-6 text-[#0EA5E9]" />
+            <p className="text-sm text-[#64748B] mt-2">
+              Platform payment ledger with commission totals.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => router.push("/admin/transactions")}
+            >
+              View Transactions
             </Button>
           </CardContent>
         </Card>
