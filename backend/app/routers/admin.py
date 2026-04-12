@@ -14,7 +14,9 @@ Endpoints:
   PUT  /admin/settings/commission
 """
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+import math
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -22,6 +24,7 @@ from sqlalchemy.orm import selectinload
 from app.core.deps import require_role
 from app.db import get_db
 from app.models.doctor_profile import DoctorProfile
+from app.models.payment import Payment, PaymentLedger, TransactionType
 from app.models.user import AccountStatus, User, UserRole
 from app.schemas.admin import (
     AdminStatsOut,
@@ -32,6 +35,7 @@ from app.schemas.admin import (
     RejectApplicationRequest,
     UserAdminPaginatedOut,
 )
+from app.schemas.payment import AdminTransactionListOut, AdminTransactionOut
 from app.schemas.user import UserAdminOut
 from app.services.kv_store import KVStore
 
@@ -244,3 +248,63 @@ async def set_commission(
     """Set the platform commission rate in kv_store."""
     await KVStore(db).set("commission_rate", str(body.commission_rate))
     return CommissionOut(commission_rate=body.commission_rate)
+
+
+@router.get("/transactions", response_model=AdminTransactionListOut)
+async def admin_transactions(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """Paginated list of all platform transactions with commission details (ADMIN-01)."""
+    total_count = (
+        await db.execute(select(func.count()).select_from(PaymentLedger))
+    ).scalar_one()
+
+    total_commission = (
+        await db.execute(
+            select(func.coalesce(func.sum(PaymentLedger.commission_amount), 0))
+        )
+    ).scalar_one()
+
+    result = await db.execute(
+        select(PaymentLedger)
+        .options(
+            selectinload(PaymentLedger.payment).selectinload(Payment.patient),
+            selectinload(PaymentLedger.payment).selectinload(Payment.provider),
+        )
+        .order_by(PaymentLedger.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    entries = result.scalars().all()
+
+    transactions = [
+        AdminTransactionOut(
+            id=entry.payment.id,
+            date=entry.created_at,
+            patient_name=entry.payment.patient.full_name,
+            provider_name=entry.payment.provider.full_name,
+            transaction_type=(
+                "Consultation Fee"
+                if entry.payment.transaction_type == TransactionType.consultation_fee
+                else "Order Sale"
+            ),
+            gross_amount=entry.gross_amount,
+            commission_amount=entry.commission_amount,
+            net_amount=entry.net_amount,
+            status=entry.payment.status.value,
+        )
+        for entry in entries
+    ]
+
+    total_pages = math.ceil(total_count / page_size) if total_count > 0 else 1
+
+    return AdminTransactionListOut(
+        transactions=transactions,
+        total_commission=total_commission,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+        total_count=total_count,
+    )
