@@ -15,15 +15,22 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Loader2 } from "lucide-react";
 
 interface DoctorData {
   id: number;
   full_name: string;
   specialty: string | null;
   profile: {
-    consultation_fee: number | null;
+    consultation_fee: number | string | null;
     avatar_url: string | null;
   } | null;
+}
+
+interface AppointmentBookedResponse {
+  id: number;
+  payment_status?: string | null;
+  payment_amount?: string | null;
 }
 
 interface BookingConfirmationProps {
@@ -58,14 +65,6 @@ function formatAppointmentTime(isoString: string): string {
     hour12: true,
   };
   return `${start.toLocaleTimeString("en-US", opts)} - ${end.toLocaleTimeString("en-US", opts)}`;
-}
-
-function formatShortDate(isoString: string): string {
-  return new Date(isoString).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 export default function BookingConfirmation({
@@ -143,6 +142,7 @@ export default function BookingConfirmation({
 
   async function handleConfirm() {
     if (!doctor) return;
+    const currentFee = doctor.profile?.consultation_fee ?? null;
     setConfirming(true);
     setBookingError(null);
     try {
@@ -161,11 +161,31 @@ export default function BookingConfirmation({
       });
 
       if (res.status === 201) {
-        const dateStr = formatShortDate(slotIso);
+        const data: AppointmentBookedResponse = await res
+          .json()
+          .catch(() => ({ id: 0 }));
+        const feeStr =
+          data.payment_amount != null
+            ? Number(data.payment_amount).toFixed(2)
+            : currentFee != null
+              ? Number(currentFee).toFixed(2)
+              : "0.00";
         toast.success(
-          `Appointment booked with Dr. ${doctor.full_name} on ${dateStr}.`
+          `Appointment booked. Payment of $${feeStr} confirmed.`
         );
-        router.push("/patient/appointments");
+        if (data.id) {
+          router.push(`/patient/appointments/${data.id}`);
+        } else {
+          router.push("/patient/appointments");
+        }
+      } else if (res.status === 422) {
+        setBookingError(
+          "This doctor has not set a consultation fee. Please try again later."
+        );
+      } else if (res.status === 502) {
+        setBookingError(
+          "Payment could not be processed. Try again or contact support if the problem persists."
+        );
       } else {
         const err = await res
           .json()
@@ -314,14 +334,6 @@ export default function BookingConfirmation({
                     {formatAppointmentTime(slotIso)}
                   </span>
                 </div>
-                {fee != null && (
-                  <div className="flex justify-between">
-                    <span className="text-[#64748B]">Fee</span>
-                    <span className="text-[#0F172A] font-medium">
-                      ${Number(fee).toFixed(2)}
-                    </span>
-                  </div>
-                )}
               </div>
 
               {/* Reason for visit */}
@@ -335,6 +347,20 @@ export default function BookingConfirmation({
                 />
               </div>
 
+              {/* Consultation fee summary card */}
+              {fee != null && (
+                <Card className="border-[#0EA5E9]/20 bg-[#0EA5E9]/5 p-4">
+                  <CardContent className="p-0 flex items-center justify-between">
+                    <span className="text-sm text-[#64748B]">
+                      Consultation Fee
+                    </span>
+                    <span className="text-3xl font-semibold text-[#0EA5E9]">
+                      ${Number(fee).toFixed(2)}
+                    </span>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Booking error */}
               {bookingError && (
                 <Alert variant="destructive">
@@ -346,9 +372,18 @@ export default function BookingConfirmation({
               <Button
                 onClick={handleConfirm}
                 disabled={confirming}
-                className="w-full bg-[#0EA5E9] text-white hover:bg-[#0EA5E9]/90"
+                className="w-full h-11 bg-[#0EA5E9] text-white hover:bg-[#0EA5E9]/90"
               >
-                {confirming ? "Booking..." : "Confirm Booking"}
+                {confirming ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : fee != null ? (
+                  `Confirm Booking & Pay $${Number(fee).toFixed(2)}`
+                ) : (
+                  "Confirm Booking & Pay"
+                )}
               </Button>
 
               {/* Go back link */}
