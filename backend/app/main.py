@@ -27,7 +27,7 @@ app.add_middleware(
 )
 
 # Routers
-from app.routers import auth, admin, profile, doctors, availability, appointments, consultations, ws, prescriptions, drugs, notifications, pharmacy, payments  # noqa: E402
+from app.routers import auth, admin, profile, doctors, availability, appointments, consultations, ws, prescriptions, drugs, notifications, pharmacy, payments, inventory  # noqa: E402
 
 app.include_router(auth.router)
 app.include_router(admin.router)
@@ -42,6 +42,7 @@ app.include_router(prescriptions.router)
 app.include_router(drugs.router)
 app.include_router(notifications.router)
 app.include_router(pharmacy.router)
+app.include_router(inventory.router)
 app.include_router(payments.router)
 
 
