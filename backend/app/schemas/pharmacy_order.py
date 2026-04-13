@@ -18,7 +18,9 @@ class OtcOrderLineIn(BaseModel):
     surfaces a price_changed diff in the 409 cart_stock_changed response.
     """
     drug_id: int
-    quantity: int = Field(ge=1, le=10)  # D-23 quantity cap
+    # D-23 quantity cap: schema only enforces ge=1 so the router can emit an
+    # explicit 400 quantity_cap_exceeded for values > 10 (instead of Pydantic 422).
+    quantity: int = Field(ge=1)
     price_snapshot: Decimal | None = None
 
 

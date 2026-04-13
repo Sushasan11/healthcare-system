@@ -365,6 +365,7 @@ async def test_payment_failure_rolls_back_stock(db_session, async_client, monkey
     await _create_user(db_session, UserRole.pharmacist)
     patient = await _create_user(db_session, UserRole.patient)
     await db_session.commit()
+    drug_id = drug.id  # capture before POST (rollback expires ORM state)
     token = await _login(async_client, patient.email)
 
     # Force PaymentService.charge_order to fail
@@ -378,13 +379,13 @@ async def test_payment_failure_rolls_back_stock(db_session, async_client, monkey
     res = await async_client.post(
         "/pharmacy/orders",
         headers=_auth(token),
-        json={"items": [{"drug_id": drug.id, "quantity": 2}]},
+        json={"items": [{"drug_id": drug_id, "quantity": 2}]},
     )
     assert res.status_code >= 400
 
     db_session.expunge_all()
     row = (
-        await db_session.execute(select(Drug).where(Drug.id == drug.id))
+        await db_session.execute(select(Drug).where(Drug.id == drug_id))
     ).scalar_one()
     assert row.stock_count == 10  # rolled back
 
@@ -435,6 +436,7 @@ async def test_checkout_price_drift_returns_409_cart_stock_changed(db_session, a
     await _create_user(db_session, UserRole.pharmacist)
     patient = await _create_user(db_session, UserRole.patient)
     await db_session.commit()
+    drug_id = drug.id  # capture before POST (rollback expires ORM state)
     token = await _login(async_client, patient.email)
 
     res = await async_client.post(
@@ -442,7 +444,7 @@ async def test_checkout_price_drift_returns_409_cart_stock_changed(db_session, a
         headers=_auth(token),
         json={
             "items": [
-                {"drug_id": drug.id, "quantity": 1, "price_snapshot": "4.50"}
+                {"drug_id": drug_id, "quantity": 1, "price_snapshot": "4.50"}
             ]
         },
     )
@@ -453,14 +455,14 @@ async def test_checkout_price_drift_returns_409_cart_stock_changed(db_session, a
     lines = detail["lines"]
     assert len(lines) == 1
     line = lines[0]
-    assert line["drug_id"] == drug.id
+    assert line["drug_id"] == drug_id
     assert line["reason"] == "price_changed"
     assert Decimal(str(line["old_price"])) == Decimal("4.50")
     assert Decimal(str(line["new_price"])) == Decimal("5.00")
 
     db_session.expunge_all()
     row = (
-        await db_session.execute(select(Drug).where(Drug.id == drug.id))
+        await db_session.execute(select(Drug).where(Drug.id == drug_id))
     ).scalar_one()
     assert row.stock_count == 10  # not decremented
 

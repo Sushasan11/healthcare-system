@@ -112,7 +112,11 @@ async def _make_issued_prescription(
     # Item A — tied to a Drug with price
     drug = None
     if with_priced_drug:
-        drug = Drug(name=f"Amoxicillin_{uuid.uuid4().hex[:6]}", price=Decimal("12.50"))
+        drug = Drug(
+            name=f"Amoxicillin_{uuid.uuid4().hex[:6]}",
+            price=Decimal("12.50"),
+            stock_count=100,  # Phase 9 retrofit: Rx orders now decrement stock (D-14)
+        )
         db_session.add(drug)
         await db_session.flush()
 
@@ -276,6 +280,14 @@ async def test_rx_checkout_decrements_drug_stock(db_session, async_client):
     rx = await _make_issued_prescription(db_session, doctor, patient)
 
     # Seed initial stock on the Drug linked to item A
+    from sqlalchemy.orm import selectinload
+    rx = (
+        await db_session.execute(
+            select(Prescription)
+            .options(selectinload(Prescription.items))
+            .where(Prescription.id == rx.id)
+        )
+    ).scalar_one()
     priced_item = next(it for it in rx.items if it.drug_id is not None)
     drug = (
         await db_session.execute(

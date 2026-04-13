@@ -9,6 +9,7 @@ Endpoints:
   PATCH  /pharmacy/orders/{id}/advance    — pharmacist advances stage (PHARM-03)
   POST   /pharmacy/orders/{id}/reject     — pharmacist rejects + refund (PHARM-04)
 """
+from dataclasses import asdict
 from datetime import datetime, timezone
 from decimal import Decimal
 
@@ -23,19 +24,26 @@ from app.db import get_db
 from app.models.notification import Notification, NotificationType
 from app.models.payment import Payment, PaymentLedger
 from app.models.pharmacy_order import OrderStatus, PharmacyOrder, PharmacyOrderItem
-from app.models.prescription import Prescription, PrescriptionItem, PrescriptionStatus
+from app.models.prescription import Drug, Prescription, PrescriptionItem, PrescriptionStatus
 from app.models.user import AccountStatus, User, UserRole
 from app.schemas.payment import InvoiceOut
 from app.schemas.payment import OrderItemOut as LegacyInvoiceItemOut
 from app.schemas.pharmacy_order import (
     OrderItemOut,
     OrderItemPreviewOut,
+    OtcOrderCreateIn,
     PharmacyOrderCreateIn,
     PharmacyOrderOut,
     PharmacyOrderPreviewOut,
     RejectOrderIn,
+    RxOrderCreateIn,
 )
 from app.services.payment_service import PaymentService
+from app.services.stock_service import (
+    StockLineRequest,
+    decrement_stock_for_lines,
+    restock_for_lines,
+)
 
 router = APIRouter(prefix="/pharmacy", tags=["pharmacy"])
 
@@ -157,6 +165,45 @@ def _serialize_order(order: PharmacyOrder) -> PharmacyOrderOut:
 # ---------------------------------------------------------------------------
 
 
+def _serialize_stock_diffs(diffs: list) -> list[dict]:
+    """Convert StockDiff dataclasses to JSON-safe dicts (Decimals → str)."""
+    out: list[dict] = []
+    for d in diffs:
+        row = asdict(d)
+        if row.get("old_price") is not None:
+            row["old_price"] = str(row["old_price"])
+        if row.get("new_price") is not None:
+            row["new_price"] = str(row["new_price"])
+        out.append(row)
+    return out
+
+
+async def _fan_out_pharmacist_notifications(
+    db: AsyncSession,
+    *,
+    order_id: int,
+    title: str,
+    body: str,
+) -> None:
+    pharmacist_rows = await db.execute(
+        select(User).where(
+            User.role == UserRole.pharmacist,
+            User.is_active == True,  # noqa: E712
+            User.account_status == AccountStatus.active,
+        )
+    )
+    for pharmacist in pharmacist_rows.scalars().all():
+        db.add(
+            Notification(
+                user_id=pharmacist.id,
+                type=NotificationType.pharmacy_order_received,
+                title=title,
+                body=body,
+                link=f"/pharmacist/orders/{order_id}",
+            )
+        )
+
+
 @router.post(
     "/orders",
     response_model=PharmacyOrderOut,
@@ -167,8 +214,18 @@ async def create_order(
     current_user: User = Depends(require_role(UserRole.patient)),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a pharmacy order from a prescription. Items and total are resolved
-    server-side from PrescriptionItem + Drug.price (fallback $10.00/unit)."""
+    """Create a pharmacy order — Rx branch (prescription_id) or OTC branch (items)."""
+    if isinstance(data, OtcOrderCreateIn):
+        return await _create_otc_order(data, current_user, db)
+    return await _create_rx_order(data, current_user, db)
+
+
+async def _create_rx_order(
+    data: RxOrderCreateIn,
+    current_user: User,
+    db: AsyncSession,
+) -> PharmacyOrderOut:
+    """Phase 7 Rx path, retrofitted with stock decrement (D-14)."""
     prescription = await _load_prescription_for_order(db, data.prescription_id)
 
     if prescription.patient_id != current_user.id:
@@ -196,6 +253,7 @@ async def create_order(
                 quantity=quantity,
                 unit_price=unit_price,
                 line_total=line_total,
+                drug_id=item.drug_id,
             )
         )
     total = total.quantize(Decimal("0.01"))
@@ -221,8 +279,26 @@ async def create_order(
     db.add_all(order_items)
     await db.flush()
 
-    # Charge the patient (provider_id deliberately None per D-03 — ledger
-    # attribution happens on first advance when a pharmacist picks up the order).
+    # D-14 retrofit: decrement stock on linked drugs. expected_price=None so the
+    # D-13 price-drift branch is a no-op for Rx orders (no snapshot exists).
+    rx_stock_lines = [
+        StockLineRequest(
+            drug_id=pi.drug_id,
+            quantity=int(pi.quantity or 1),
+            expected_price=None,
+        )
+        for pi in prescription.items
+        if pi.drug_id is not None
+    ]
+    diffs = await decrement_stock_for_lines(db, rx_stock_lines)
+    if diffs:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"error": "cart_stock_changed", "lines": _serialize_stock_diffs(diffs)},
+        )
+
+    # Charge the patient (provider_id deliberately None per D-03)
     try:
         payment_service = PaymentService(db)
         await payment_service.charge_order(
@@ -238,35 +314,21 @@ async def create_order(
             detail={"error": "payment_failed", "message": str(e)},
         )
 
-    # Release the prescription from issued → ordered
     prescription.status = PrescriptionStatus.ordered
 
-    # Fan-out notification to all active pharmacists
-    pharmacist_rows = await db.execute(
-        select(User).where(
-            User.role == UserRole.pharmacist,
-            User.is_active == True,  # noqa: E712
-            User.account_status == AccountStatus.active,
-        )
-    )
-    pharmacists = pharmacist_rows.scalars().all()
     patient_name = current_user.full_name
     doctor_name = (
         prescription.doctor.full_name if prescription.doctor is not None else "doctor"
     )
-    for pharmacist in pharmacists:
-        db.add(
-            Notification(
-                user_id=pharmacist.id,
-                type=NotificationType.pharmacy_order_received,
-                title="New Prescription Order",
-                body=(
-                    f"Patient {patient_name} placed an order from "
-                    f"Dr. {doctor_name}'s prescription."
-                ),
-                link=f"/pharmacist/orders/{order.id}",
-            )
-        )
+    await _fan_out_pharmacist_notifications(
+        db,
+        order_id=order.id,
+        title="New Prescription Order",
+        body=(
+            f"Patient {patient_name} placed an order from "
+            f"Dr. {doctor_name}'s prescription."
+        ),
+    )
 
     try:
         await db.commit()
@@ -277,6 +339,118 @@ async def create_order(
             detail={"error": "prescription_already_used"},
         )
 
+    order = await _load_order(db, order.id)
+    return _serialize_order(order)
+
+
+async def _create_otc_order(
+    data: OtcOrderCreateIn,
+    current_user: User,
+    db: AsyncSession,
+) -> PharmacyOrderOut:
+    """Phase 9 OTC path — items payload, stock decrement + price drift, refund-safe rollback."""
+    # Defensive quantity cap (Pydantic already enforces, but D-23 requires explicit 400)
+    for line in data.items:
+        if line.quantity < 1 or line.quantity > 10:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="quantity_cap_exceeded",
+            )
+
+    drug_ids = [line.drug_id for line in data.items]
+    drug_rows = await db.execute(select(Drug).where(Drug.id.in_(drug_ids)))
+    drugs_by_id: dict[int, Drug] = {d.id: d for d in drug_rows.scalars().all()}
+
+    for line in data.items:
+        drug = drugs_by_id.get(line.drug_id)
+        if drug is None or drug.archived or drug.rx_required:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="drug_not_found_or_unavailable",
+            )
+
+    # Build stock line requests carrying the client snapshot for D-13 detection.
+    stock_lines = [
+        StockLineRequest(
+            drug_id=line.drug_id,
+            quantity=line.quantity,
+            expected_price=line.price_snapshot,
+        )
+        for line in data.items
+    ]
+    diffs = await decrement_stock_for_lines(db, stock_lines)
+    if diffs:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"error": "cart_stock_changed", "lines": _serialize_stock_diffs(diffs)},
+        )
+
+    # Build order from server-side prices
+    order_items: list[PharmacyOrderItem] = []
+    total = Decimal("0.00")
+    for line in data.items:
+        drug = drugs_by_id[line.drug_id]
+        unit_price = Decimal(drug.price)
+        line_total = (unit_price * line.quantity).quantize(Decimal("0.01"))
+        total += line_total
+        order_items.append(
+            PharmacyOrderItem(
+                medicine_name=drug.name,
+                quantity=line.quantity,
+                unit_price=unit_price,
+                line_total=line_total,
+                drug_id=drug.id,
+            )
+        )
+    total = total.quantize(Decimal("0.01"))
+
+    order = PharmacyOrder(
+        patient_id=current_user.id,
+        prescription_id=None,
+        total_amount=total,
+        status=OrderStatus.received,
+    )
+    db.add(order)
+    await db.flush()
+    for it in order_items:
+        it.order_id = order.id
+    db.add_all(order_items)
+    await db.flush()
+
+    # Charge. On any exception, rollback so stock decrements unwind (case 11).
+    try:
+        payment_service = PaymentService(db)
+        await payment_service.charge_order(
+            order_id=order.id,
+            patient_id=current_user.id,
+            provider_id=None,
+            gross_amount=total,
+        )
+    except ValueError as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={"error": "payment_failed", "message": str(e)},
+        )
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={"error": "payment_failed", "message": str(e)},
+        )
+
+    await _fan_out_pharmacist_notifications(
+        db,
+        order_id=order.id,
+        title="New OTC Order",
+        body=(
+            f"Patient {current_user.full_name} placed an OTC order "
+            f"({len(data.items)} items)"
+        ),
+    )
+
+    await db.commit()
     order = await _load_order(db, order.id)
     return _serialize_order(order)
 
@@ -476,9 +650,18 @@ async def reject_order(
             detail={"error": "refund_failed", "message": str(e)},
         )
 
-    if order.prescription is not None:
-        order.prescription.status = PrescriptionStatus.issued
-    order.prescription_id = None
+    if order.prescription_id is None:
+        # OTC rejection — restock the linked drugs (D-03).
+        restock_lines = [
+            (item.drug_id, item.quantity)
+            for item in order.items
+            if item.drug_id is not None
+        ]
+        await restock_for_lines(db, restock_lines)
+    else:
+        if order.prescription is not None:
+            order.prescription.status = PrescriptionStatus.issued
+        order.prescription_id = None
 
     reason_text = body.reason if body.reason else "The pharmacist did not provide a reason."
     db.add(
