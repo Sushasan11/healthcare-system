@@ -1,13 +1,35 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class PharmacyOrderCreateIn(BaseModel):
-    """Phase 7 order creation — prescription-driven. Items are resolved server-side."""
+class RxOrderCreateIn(BaseModel):
+    """Phase 7 Rx branch — create a pharmacy order from an issued prescription."""
     prescription_id: int
+
+
+class OtcOrderLineIn(BaseModel):
+    """Phase 9 OTC branch line item.
+
+    price_snapshot (D-13): client-provided expected unit price. If set and differs
+    from the server's current Drug.price at checkout, decrement_stock_for_lines
+    surfaces a price_changed diff in the 409 cart_stock_changed response.
+    """
+    drug_id: int
+    quantity: int = Field(ge=1, le=10)  # D-23 quantity cap
+    price_snapshot: Decimal | None = None
+
+
+class OtcOrderCreateIn(BaseModel):
+    """Phase 9 OTC branch — create a pharmacy order from cart line items."""
+    items: list[OtcOrderLineIn] = Field(min_length=1)
+
+
+# D-01: discriminated union. FastAPI resolves by payload shape
+# ({prescription_id: ...} -> RxOrderCreateIn, {items: [...]} -> OtcOrderCreateIn).
+PharmacyOrderCreateIn = Union[RxOrderCreateIn, OtcOrderCreateIn]
 
 
 class OrderItemPreviewOut(BaseModel):
@@ -63,3 +85,22 @@ class AdvanceOrderIn(BaseModel):
 
 class RejectOrderIn(BaseModel):
     reason: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# D-13: cart_stock_changed 409 payload
+# ---------------------------------------------------------------------------
+
+
+class CartStockChangedLine(BaseModel):
+    drug_id: int
+    requested: int
+    available: int
+    reason: Literal["stock_insufficient", "out_of_stock", "price_changed"]
+    old_price: Decimal | None = None
+    new_price: Decimal | None = None
+
+
+class CartStockChangedError(BaseModel):
+    error: Literal["cart_stock_changed"] = "cart_stock_changed"
+    lines: list[CartStockChangedLine]
