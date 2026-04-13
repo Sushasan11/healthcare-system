@@ -16,6 +16,8 @@ import {
   Clock,
   MessageSquare,
   FileText,
+  ClipboardList,
+  ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -45,6 +47,7 @@ const MENU_ITEMS: Record<Role, MenuItem[]> = {
     { label: "My Appointments", href: "/patient/appointments", icon: Calendar },
     { label: "Consultations", href: "/patient/consultations", icon: MessageSquare },
     { label: "My Prescriptions", href: "/patient/prescriptions", icon: FileText },
+    { label: "Orders", href: "/patient/pharmacy/orders", icon: ShoppingCart },
     { label: "Profile", href: "/patient/profile", icon: User },
   ],
   doctor: [
@@ -61,7 +64,7 @@ const MENU_ITEMS: Record<Role, MenuItem[]> = {
       href: "/pharmacist/dashboard",
       icon: LayoutDashboard,
     },
-    { label: "Prescriptions", href: "/pharmacist/prescriptions", icon: FileText },
+    { label: "Orders", href: "/pharmacist/orders", icon: ClipboardList },
     { label: "Profile", href: "/pharmacist/profile", icon: User },
   ],
   admin: [
