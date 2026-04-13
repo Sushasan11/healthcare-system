@@ -16,10 +16,10 @@ Requirements for e-pharmacy, payments, pharmacist dashboard, consultation histor
 
 ### E-Pharmacy: OTC Store
 
-- [ ] **OTC-01**: Patient can browse OTC medicines by category
-- [ ] **OTC-02**: Patient can search medicines by name
-- [ ] **OTC-03**: Patient can view medicine detail page (name, description, dosage, price, stock)
-- [ ] **OTC-04**: Patient can add to cart, adjust quantity, and checkout with payment
+- [x] **OTC-01**: Patient can browse OTC medicines by category
+- [x] **OTC-02**: Patient can search medicines by name
+- [x] **OTC-03**: Patient can view medicine detail page (name, description, dosage, price, stock)
+- [x] **OTC-04**: Patient can add to cart, adjust quantity, and checkout with payment
 
 ### Platform Payments
 
@@ -32,7 +32,7 @@ Requirements for e-pharmacy, payments, pharmacist dashboard, consultation histor
 ### Pharmacist Dashboard
 
 - [ ] **PHARM-01**: Pharmacist can view incoming prescription order queue with attached Rx details
-- [ ] **PHARM-02**: Pharmacist can manage medicine inventory (list, stock counts, add/deduct, low-stock alerts)
+- [x] **PHARM-02**: Pharmacist can manage medicine inventory (list, stock counts, add/deduct, low-stock alerts)
 - [ ] **PHARM-03**: Pharmacist can progress order through fulfillment stages (verified → preparing → dispatched → delivered)
 - [ ] **PHARM-04**: Pharmacist can reject order with reason (notification sent to patient)
 
@@ -97,11 +97,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PHARM-01 | Phase 7: Prescription-Linked Ordering | Pending |
 | PHARM-03 | Phase 7: Prescription-Linked Ordering | Pending |
 | PHARM-04 | Phase 7: Prescription-Linked Ordering | Pending |
-| PHARM-02 | Phase 8: Pharmacist Inventory | Pending |
-| OTC-01 | Phase 9: OTC Medicine Store | Pending |
-| OTC-02 | Phase 9: OTC Medicine Store | Pending |
-| OTC-03 | Phase 9: OTC Medicine Store | Pending |
-| OTC-04 | Phase 9: OTC Medicine Store | Pending |
+| PHARM-02 | Phase 8: Pharmacist Inventory | Complete |
+| OTC-01 | Phase 9: OTC Medicine Store | Complete |
+| OTC-02 | Phase 9: OTC Medicine Store | Complete |
+| OTC-03 | Phase 9: OTC Medicine Store | Complete |
+| OTC-04 | Phase 9: OTC Medicine Store | Complete |
 | NOTIF-01 | Phase 10: Appointment Notifications | Pending |
 | NOTIF-02 | Phase 10: Appointment Notifications | Pending |
 | NOTIF-03 | Phase 10: Appointment Notifications | Pending |

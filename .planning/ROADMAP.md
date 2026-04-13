@@ -21,8 +21,9 @@
 ### v2.0 E-Pharmacy & Payments
 
 - [x] **Phase 6: Payment Foundation** — Payment collection, commission splitting, earnings dashboards, and admin transaction ledger (completed 2026-04-12)
-- [ ] **Phase 7: Prescription-Linked Ordering** — Patient orders medicines from consultation Rx; pharmacist receives, verifies, and fulfills the order
-- [ ] **Phase 8: Pharmacist Inventory** — Pharmacist manages the medicine catalog and stock counts that enable browsable OTC listings
+- [x] **Phase 7: Prescription-Linked Ordering** — Patient orders medicines from consultation Rx; pharmacist receives, verifies, and fulfills the order (completed 2026-04-13)
+- [x] **Phase 8: Pharmacist Inventory** — Pharmacist manages the medicine catalog and stock counts that enable browsable OTC listings
+ (completed 2026-04-13)
 - [ ] **Phase 9: OTC Medicine Store** — Patient browses, searches, and buys medicines without a prescription
 - [ ] **Phase 10: Appointment Notifications** — Booking confirmations, 24h/1h reminders, and cancellation/reschedule alerts via Celery
 - [ ] **Phase 11: Consultation History** — Patient and doctor view past consultation list and per-consultation chat transcript
@@ -57,7 +58,12 @@ Plans:
   3. Patient can track their order status through received, verified, dispatched, and delivered stages
   4. Pharmacist sees all incoming prescription orders in a queue with the attached Rx details visible
   5. Pharmacist can advance an order through fulfillment stages or reject it with a reason, and the patient is notified of rejection
-**Plans**: TBD
+**Plans:** 4/4 plans complete
+Plans:
+- [x] 07-01-PLAN.md — Backend models, migration 008, schemas, Wave 0 test stubs
+- [x] 07-02-PLAN.md — Backend refund_order + pharmacy router endpoints + green Wave 0 tests
+- [x] 07-03-PLAN.md — Patient surfaces (Rx CTA, pre-filled cart, orders list, tracker)
+- [x] 07-04-PLAN.md — Pharmacist surfaces (queue, order detail + stage advance + rejection dialog)
 
 ### Phase 8: Pharmacist Inventory
 **Goal**: Pharmacist has a functional inventory system so that medicine stock exists for the OTC store to surface to patients
@@ -67,7 +73,11 @@ Plans:
   1. Pharmacist can add new medicines to inventory with name, category, description, dosage, price, and stock count
   2. Pharmacist can adjust stock counts (add or deduct) and the updated quantity is immediately reflected
   3. Pharmacist sees a low-stock alert indicator on medicines that fall below the threshold
-**Plans**: TBD
+**Plans:** 3/3 plans complete
+Plans:
+- [x] 08-01-PLAN.md — Drug model extension, migration 009, inventory schemas, Wave 0 test stubs
+- [x] 08-02-PLAN.md — Inventory router (CRUD + adjust-stock + low-stock-count) turning Wave 0 tests green
+- [x] 08-03-PLAN.md — Pharmacist inventory UI (list + add/edit + sidebar + dashboard low-stock card)
 
 ### Phase 9: OTC Medicine Store
 **Goal**: Patient can browse, search, and purchase medicines without a prescription through a self-service store
@@ -78,7 +88,12 @@ Plans:
   2. Patient can search medicines by name and see matching results with price and stock status
   3. Patient can view a medicine detail page showing name, description, dosage, price, and current stock
   4. Patient can add medicines to cart, adjust quantities, complete checkout with payment, and receive an order confirmation
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+- [x] 09-01-PLAN.md — Migration 010 (drug_id FK), discriminated-union schemas, stock_service skeleton, 15 Wave 0 failing stubs + Rx retrofit assertion
+- [ ] 09-02-PLAN.md — Public catalog router, stock_service row-lock bodies, dual-payload create_order + Rx retrofit + OTC reject restock, all Wave 0 tests green
+- [ ] 09-03-PLAN.md — Zustand cart store, serverFetch, TopBar userId + CartIconBadge, Sidebar entry, server-component landing/category/detail pages
+- [ ] 09-04-PLAN.md — Cart + checkout + 409 interstitial, conditional order detail (patient + pharmacist), pharmacist queue Rx/OTC badge + filter chip
 
 ### Phase 10: Appointment Notifications
 **Goal**: Patient and doctor receive timely automated notifications for booking events and appointment reminders without manual intervention
@@ -112,8 +127,8 @@ Plans:
 | 4. Prescriptions | v1.0 | 4/4 | Complete | 2026-03-20 |
 | 5. Admin Panel | v1.0 | 3/3 | Complete | 2026-03-21 |
 | 6. Payment Foundation | v2.0 | 5/5 | Complete   | 2026-04-12 |
-| 7. Prescription-Linked Ordering | v2.0 | 0/? | Not started | - |
-| 8. Pharmacist Inventory | v2.0 | 0/? | Not started | - |
-| 9. OTC Medicine Store | v2.0 | 0/? | Not started | - |
-| 10. Appointment Notifications | v2.0 | 0/? | Not started | - |
-| 11. Consultation History | v2.0 | 0/? | Not started | - |
+| 7. Prescription-Linked Ordering | v2.0 | 4/4 | Complete | 2026-04-13 |
+| 8. Pharmacist Inventory | v2.0 | 3/3 | Complete   | 2026-04-13 |
+| 9. OTC Medicine Store | v2.0 | 0/4 | Planned | - |
+| 10. Appointment Notifications | v2.0 | 0/4 | Planned | - |
+| 11. Consultation History | v2.0 | 0/4 | Planned | - |
