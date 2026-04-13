@@ -267,6 +267,39 @@ async def test_prescription_single_use(db_session, async_client):
     assert res2.json()["detail"]["error"] == "prescription_already_used"
 
 
+async def test_rx_checkout_decrements_drug_stock(db_session, async_client):
+    """D-28 case 14 / D-14 retrofit: Rx checkout must decrement Drug.stock_count."""
+    doctor = await _create_user(db_session, UserRole.doctor)
+    patient = await _create_user(db_session, UserRole.patient)
+    await _create_user(db_session, UserRole.pharmacist)
+    await db_session.commit()
+    rx = await _make_issued_prescription(db_session, doctor, patient)
+
+    # Seed initial stock on the Drug linked to item A
+    priced_item = next(it for it in rx.items if it.drug_id is not None)
+    drug = (
+        await db_session.execute(
+            select(Drug).where(Drug.id == priced_item.drug_id)
+        )
+    ).scalar_one()
+    drug.stock_count = 10
+    await db_session.commit()
+    before = drug.stock_count
+    qty = int(priced_item.quantity or 1)
+
+    token = await _login(async_client, patient.email)
+    res = await async_client.post(
+        "/pharmacy/orders", headers=_auth(token), json={"prescription_id": rx.id}
+    )
+    assert res.status_code == 201, res.text
+
+    db_session.expunge_all()
+    row = (
+        await db_session.execute(select(Drug).where(Drug.id == priced_item.drug_id))
+    ).scalar_one()
+    assert row.stock_count == before - qty
+
+
 async def test_rejected_prescription_reorderable(db_session, async_client):
     """RXORD-04: after rejection+refund, prescription is issued again and re-orderable."""
     doctor = await _create_user(db_session, UserRole.doctor)
