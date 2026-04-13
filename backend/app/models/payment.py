@@ -24,7 +24,9 @@ class Payment(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     patient_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    provider_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    provider_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
     appointment_id: Mapped[int | None] = mapped_column(
         ForeignKey("appointments.id"), nullable=True, unique=True
     )
@@ -48,7 +50,7 @@ class Payment(Base):
     )
 
     patient: Mapped["User"] = relationship(foreign_keys=[patient_id])  # noqa: F821
-    provider: Mapped["User"] = relationship(foreign_keys=[provider_id])  # noqa: F821
+    provider: Mapped["User | None"] = relationship(foreign_keys=[provider_id])  # noqa: F821
     ledger_entry: Mapped["PaymentLedger | None"] = relationship(
         back_populates="payment", uselist=False
     )
@@ -61,7 +63,9 @@ class PaymentLedger(Base):
     payment_id: Mapped[int] = mapped_column(
         ForeignKey("payments.id"), unique=True, nullable=False
     )
-    provider_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    provider_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
     gross_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     commission_rate: Mapped[Decimal] = mapped_column(Numeric(5, 4), nullable=False)
     commission_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
@@ -71,4 +75,4 @@ class PaymentLedger(Base):
     )
 
     payment: Mapped["Payment"] = relationship(back_populates="ledger_entry")
-    provider: Mapped["User"] = relationship(foreign_keys=[provider_id])  # noqa: F821
+    provider: Mapped["User | None"] = relationship(foreign_keys=[provider_id])  # noqa: F821

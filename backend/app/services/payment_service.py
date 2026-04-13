@@ -121,7 +121,7 @@ class PaymentService:
         self,
         order_id: int,
         patient_id: int,
-        provider_id: int,
+        provider_id: int | None,
         gross_amount: Decimal,
         currency: str = "USD",
     ) -> Payment:
@@ -161,6 +161,20 @@ class PaymentService:
         )
         self._db.add(ledger)
         return payment
+
+    async def refund_order(self, order_id: int) -> Payment:
+        """Find the Payment row for a pharmacy order and issue a full refund.
+
+        Reuses refund_payment() for gateway call + ledger zeroing. Caller is
+        responsible for db.commit(). Raises ValueError if no payment exists.
+        """
+        result = await self._db.execute(
+            select(Payment).where(Payment.pharmacy_order_id == order_id)
+        )
+        payment = result.scalar_one_or_none()
+        if payment is None:
+            raise ValueError(f"No payment found for order {order_id}")
+        return await self.refund_payment(payment)
 
     async def refund_payment(self, payment: Payment) -> Payment:
         result = await self._gateway.refund(
