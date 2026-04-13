@@ -1,6 +1,8 @@
 import enum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, func
+from decimal import Decimal
+
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -9,6 +11,7 @@ from app.core.encryption import EncryptedString
 
 class PrescriptionStatus(str, enum.Enum):
     issued = "issued"
+    ordered = "ordered"
     dispensed = "dispensed"
     completed = "completed"
 
@@ -53,9 +56,16 @@ class PrescriptionItem(Base):
     frequency: Mapped[str] = mapped_column(EncryptedString, nullable=False)  # PHI
     duration: Mapped[str] = mapped_column(EncryptedString, nullable=False)  # PHI
     instructions: Mapped[str | None] = mapped_column(EncryptedString, nullable=True)  # PHI
+    drug_id: Mapped[int | None] = mapped_column(
+        ForeignKey("drugs.id"), nullable=True
+    )
+    quantity: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
 
     # Relationships
     prescription: Mapped["Prescription"] = relationship(back_populates="items")
+    drug: Mapped["Drug | None"] = relationship(foreign_keys=[drug_id])
 
 
 class Drug(Base):
@@ -65,3 +75,4 @@ class Drug(Base):
     name: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
     generic_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
     form: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)

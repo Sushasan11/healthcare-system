@@ -8,9 +8,11 @@ from app.db import Base
 
 
 class OrderStatus(str, enum.Enum):
-    pending = "pending"
-    completed = "completed"
-    cancelled = "cancelled"
+    received = "received"
+    verified = "verified"
+    dispatched = "dispatched"
+    delivered = "delivered"
+    rejected = "rejected"
 
 
 class PharmacyOrder(Base):
@@ -20,13 +22,38 @@ class PharmacyOrder(Base):
     patient_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     total_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     status: Mapped[OrderStatus] = mapped_column(
-        Enum(OrderStatus), default=OrderStatus.pending, nullable=False
+        Enum(OrderStatus), default=OrderStatus.received, nullable=False
+    )
+    pharmacist_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
+    prescription_id: Mapped[int | None] = mapped_column(
+        ForeignKey("prescriptions.id"), nullable=True, unique=True
+    )
+    rejection_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    verified_at: Mapped[object | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    dispatched_at: Mapped[object | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    delivered_at: Mapped[object | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    rejected_at: Mapped[object | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[object] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     patient: Mapped["User"] = relationship(foreign_keys=[patient_id])  # noqa: F821
+    pharmacist: Mapped["User | None"] = relationship(  # noqa: F821
+        foreign_keys=[pharmacist_id]
+    )
+    prescription: Mapped["Prescription | None"] = relationship(  # noqa: F821
+        foreign_keys=[prescription_id]
+    )
     items: Mapped[list["PharmacyOrderItem"]] = relationship(
         back_populates="order", cascade="all, delete-orphan"
     )

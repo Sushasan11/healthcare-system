@@ -20,7 +20,7 @@
 
 ### v2.0 E-Pharmacy & Payments
 
-- [ ] **Phase 6: Payment Foundation** — Payment collection, commission splitting, earnings dashboards, and admin transaction ledger
+- [x] **Phase 6: Payment Foundation** — Payment collection, commission splitting, earnings dashboards, and admin transaction ledger (completed 2026-04-12)
 - [ ] **Phase 7: Prescription-Linked Ordering** — Patient orders medicines from consultation Rx; pharmacist receives, verifies, and fulfills the order
 - [ ] **Phase 8: Pharmacist Inventory** — Pharmacist manages the medicine catalog and stock counts that enable browsable OTC listings
 - [ ] **Phase 9: OTC Medicine Store** — Patient browses, searches, and buys medicines without a prescription
@@ -39,12 +39,12 @@
   3. Platform commission is automatically deducted and the net amount is recorded to the doctor or pharmacist ledger
   4. Doctor and pharmacist can view an earnings dashboard showing gross earned, commission deducted, and net payable
   5. Admin can view a paginated transaction list with per-transaction commission amounts and running totals
-**Plans:** 5 plans
+**Plans:** 5/5 plans complete
 Plans:
 - [x] 06-01-PLAN.md — Payment models, migration, PaymentService, schemas, and test scaffold
 - [x] 06-02-PLAN.md — Appointment booking payment integration and receipt endpoint
 - [x] 06-03-PLAN.md — Pharmacy order stub, invoice endpoint, and admin transactions endpoint
-- [ ] 06-04-PLAN.md — Frontend booking payment CTA and appointment detail with receipt
+- [x] 06-04-PLAN.md — Frontend booking payment CTA and appointment detail with receipt
 - [x] 06-05-PLAN.md — Frontend earnings dashboard and admin transactions page
 
 ### Phase 7: Prescription-Linked Ordering
@@ -111,7 +111,7 @@ Plans:
 | 3. Real-Time Consultation | v1.0 | 7/7 | Complete | 2026-03-20 |
 | 4. Prescriptions | v1.0 | 4/4 | Complete | 2026-03-20 |
 | 5. Admin Panel | v1.0 | 3/3 | Complete | 2026-03-21 |
-| 6. Payment Foundation | v2.0 | 0/5 | Planned | - |
+| 6. Payment Foundation | v2.0 | 5/5 | Complete   | 2026-04-12 |
 | 7. Prescription-Linked Ordering | v2.0 | 0/? | Not started | - |
 | 8. Pharmacist Inventory | v2.0 | 0/? | Not started | - |
 | 9. OTC Medicine Store | v2.0 | 0/? | Not started | - |

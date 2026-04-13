@@ -9,6 +9,9 @@ from app.db import Base
 class NotificationType(str, enum.Enum):
     prescription_issued = "prescription_issued"
     consultation_reopened = "consultation_reopened"
+    pharmacy_order_received = "pharmacy_order_received"
+    pharmacy_order_status_changed = "pharmacy_order_status_changed"
+    pharmacy_order_rejected = "pharmacy_order_rejected"
 
 
 class Notification(Base):
