@@ -7,6 +7,9 @@ import { apiFetch } from "@/lib/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { OrderKindBadge } from "@/components/pharmacy/OrderKindBadge";
+
+type KindFilter = "all" | "rx" | "otc";
 
 interface OrderItemOut {
   id: number;
@@ -58,6 +61,7 @@ export default function PharmacistOrdersQueuePage() {
   const [orders, setOrders] = useState<PharmacyOrderOut[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [kindFilter, setKindFilter] = useState<KindFilter>("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -84,13 +88,42 @@ export default function PharmacistOrdersQueuePage() {
     };
   }, []);
 
+  const filtered = orders.filter((o) =>
+    kindFilter === "all"
+      ? true
+      : kindFilter === "rx"
+        ? o.prescription_id !== null
+        : o.prescription_id === null,
+  );
+
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-baseline justify-between">
         <h1 className="text-xl font-semibold text-[#0F172A]">Order Queue</h1>
         <p className="text-sm text-[#64748B]">
-          {orders.length > 0 ? `${orders.length} orders pending` : "No pending orders"}
+          {filtered.length > 0
+            ? `${filtered.length} orders pending`
+            : "No pending orders"}
         </p>
+      </div>
+
+      <div className="flex gap-2" role="tablist" aria-label="Filter by order kind">
+        {(["all", "rx", "otc"] as const).map((k) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={kindFilter === k}
+            onClick={() => setKindFilter(k)}
+            className={`px-3 py-1 text-xs rounded-md font-semibold ${
+              kindFilter === k
+                ? "bg-[#0EA5E9] text-white"
+                : "bg-slate-100 text-[#64748B] hover:bg-slate-200"
+            }`}
+          >
+            {k === "all" ? "All" : k === "rx" ? "Rx" : "OTC"}
+          </button>
+        ))}
       </div>
 
       {loading && (
@@ -107,7 +140,7 @@ export default function PharmacistOrdersQueuePage() {
         </Alert>
       )}
 
-      {!loading && !error && orders.length === 0 && (
+      {!loading && !error && filtered.length === 0 && (
         <div className="py-16 flex flex-col items-center text-center">
           <Inbox className="size-8 text-[#E2E8F0]" />
           <p className="text-sm font-semibold text-[#0F172A] mt-3">No pending orders</p>
@@ -117,22 +150,24 @@ export default function PharmacistOrdersQueuePage() {
         </div>
       )}
 
-      {!loading && !error && orders.length > 0 && (
+      {!loading && !error && filtered.length > 0 && (
         <div>
-          <div className="grid grid-cols-[80px_1fr_120px_140px_120px_80px] gap-4 border-b border-[#E2E8F0] pb-2 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+          <div className="grid grid-cols-[80px_60px_1fr_120px_140px_120px_80px] gap-4 border-b border-[#E2E8F0] pb-2 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
             <span>Order#</span>
+            <span>Kind</span>
             <span>Patient</span>
             <span className="hidden md:block">Items</span>
             <span className="hidden md:block">Received</span>
             <span>Status</span>
             <span>Action</span>
           </div>
-          {orders.map((order) => (
+          {filtered.map((order) => (
             <Link href={`/pharmacist/orders/${order.id}`} key={order.id}>
-              <div className="grid grid-cols-[80px_1fr_120px_140px_120px_80px] gap-4 border-b border-[#E2E8F0] py-3 min-h-[56px] items-center hover:bg-[#F8FAFC] cursor-pointer">
+              <div className="grid grid-cols-[80px_60px_1fr_120px_140px_120px_80px] gap-4 border-b border-[#E2E8F0] py-3 min-h-[56px] items-center hover:bg-[#F8FAFC] cursor-pointer">
                 <span className="text-sm font-semibold text-[#0F172A]">
                   #{order.id}
                 </span>
+                <OrderKindBadge prescriptionId={order.prescription_id} />
                 <span className="text-sm text-[#0F172A]">
                   {order.patient_name ?? "Unknown"}
                 </span>

@@ -19,6 +19,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { OrderKindBadge } from "@/components/pharmacy/OrderKindBadge";
 
 interface OrderItemOut {
   id: number;
@@ -249,19 +250,34 @@ export default function PharmacistOrderDetailPage({
         <ArrowLeft className="size-4" /> Back to queue
       </Link>
 
-      <h1 className="text-xl font-semibold text-[#0F172A]">Order #{order.id}</h1>
+      <div className="flex items-center gap-3">
+        <h1 className="text-xl font-semibold text-[#0F172A]">Order #{order.id}</h1>
+        <OrderKindBadge prescriptionId={order.prescription_id} />
+      </div>
 
       <div className="md:grid md:grid-cols-[1fr_320px] md:gap-6 space-y-6 md:space-y-0">
         {/* Left column — Rx + order details */}
         <div className="bg-white border border-[#E2E8F0] rounded-lg p-4 space-y-4">
-          <h2 className="text-base font-semibold text-[#0F172A]">Prescription</h2>
-          <LabelValue
-            label="Prescribing doctor"
-            value={`Dr. ${order.doctor_name ?? "Unknown"}`}
-          />
-          <LabelValue label="Prescription date" value={formatDate(order.created_at)} />
+          {order.prescription_id !== null ? (
+            <>
+              <h2 className="text-base font-semibold text-[#0F172A]">Prescription</h2>
+              <LabelValue
+                label="Prescribing doctor"
+                value={`Dr. ${order.doctor_name ?? "Unknown"}`}
+              />
+              <LabelValue label="Prescription date" value={formatDate(order.created_at)} />
 
-          <Separator />
+              <Separator />
+            </>
+          ) : (
+            <>
+              <h2 className="text-base font-semibold text-[#0F172A]">Self-service order</h2>
+              <p className="text-sm text-[#64748B]">
+                OTC purchase placed directly from the medicine store — no prescription required.
+              </p>
+              <Separator />
+            </>
+          )}
 
           <div>
             <p className="text-sm font-semibold text-[#0F172A] mb-2">Medicines</p>

@@ -160,9 +160,20 @@ export default function PatientOrderDetailPage({
             <OrderTracker order={order} />
           )}
 
+          {order.prescription_id === null && (
+            <div className="p-4 border border-[#E2E8F0] rounded-lg bg-slate-50">
+              <h3 className="text-sm font-semibold text-[#0F172A]">Self-service order</h3>
+              <p className="text-xs text-[#64748B] mt-1">
+                This order was placed from the OTC medicine store.
+              </p>
+            </div>
+          )}
+
           <div className="bg-white border border-[#E2E8F0] rounded-lg">
             <div className="p-4 border-b border-[#E2E8F0]">
-              <h2 className="text-base font-semibold text-[#0F172A]">Prescribed Medicines</h2>
+              <h2 className="text-base font-semibold text-[#0F172A]">
+                {order.prescription_id !== null ? "Prescribed Medicines" : "Order Items"}
+              </h2>
             </div>
             {order.items.map((item) => (
               <div
