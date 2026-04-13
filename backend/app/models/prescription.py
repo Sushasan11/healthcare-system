@@ -2,7 +2,18 @@ import enum
 
 from decimal import Decimal
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, String, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    false as sa_false,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -68,6 +79,15 @@ class PrescriptionItem(Base):
     drug: Mapped["Drug | None"] = relationship(foreign_keys=[drug_id])
 
 
+class MedicineCategory(str, enum.Enum):
+    pain_relief = "pain_relief"
+    cold_and_flu = "cold_and_flu"
+    digestive = "digestive"
+    vitamins_supplements = "vitamins_supplements"
+    first_aid = "first_aid"
+    skin_care = "skin_care"
+
+
 class Drug(Base):
     __tablename__ = "drugs"
 
@@ -76,3 +96,23 @@ class Drug(Base):
     generic_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
     form: Mapped[str | None] = mapped_column(String(100), nullable=True)
     price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    category: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default=MedicineCategory.first_aid.value,
+        server_default="first_aid",
+    )
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    dosage: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    stock_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    low_stock_threshold: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=10, server_default="10"
+    )
+    rx_required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_false()
+    )
+    archived: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_false()
+    )
