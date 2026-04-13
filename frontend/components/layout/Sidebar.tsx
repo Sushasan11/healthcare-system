@@ -18,6 +18,8 @@ import {
   FileText,
   ClipboardList,
   ShoppingCart,
+  Package,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -65,6 +67,8 @@ const MENU_ITEMS: Record<Role, MenuItem[]> = {
       icon: LayoutDashboard,
     },
     { label: "Orders", href: "/pharmacist/orders", icon: ClipboardList },
+    { label: "Inventory", href: "/pharmacist/inventory", icon: Package },
+    { label: "Earnings", href: "/pharmacist/earnings", icon: BarChart3 },
     { label: "Profile", href: "/pharmacist/profile", icon: User },
   ],
   admin: [
