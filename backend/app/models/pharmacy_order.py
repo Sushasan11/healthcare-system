@@ -68,6 +68,9 @@ class PharmacyOrderItem(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     order_id: Mapped[int] = mapped_column(ForeignKey("pharmacy_orders.id"), nullable=False)
+    drug_id: Mapped[int | None] = mapped_column(
+        ForeignKey("drugs.id"), nullable=True
+    )
     medicine_name: Mapped[str] = mapped_column(String(255), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
