@@ -43,6 +43,7 @@ export default function PatientLayout({
         <TopBar
           userName={user.full_name}
           userRole={user.role}
+          userId={user.id}
           onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
           onLogout={logout}
         />

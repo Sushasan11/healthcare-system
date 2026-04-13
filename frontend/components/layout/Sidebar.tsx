@@ -20,6 +20,7 @@ import {
   ShoppingCart,
   Package,
   BarChart3,
+  Pill,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -49,6 +50,7 @@ const MENU_ITEMS: Record<Role, MenuItem[]> = {
     { label: "My Appointments", href: "/patient/appointments", icon: Calendar },
     { label: "Consultations", href: "/patient/consultations", icon: MessageSquare },
     { label: "My Prescriptions", href: "/patient/prescriptions", icon: FileText },
+    { label: "Pharmacy", href: "/patient/pharmacy", icon: Pill },
     { label: "Orders", href: "/patient/pharmacy/orders", icon: ShoppingCart },
     { label: "Profile", href: "/patient/profile", icon: User },
   ],

@@ -14,11 +14,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { apiFetch } from "@/lib/api";
 import { NotificationPanel } from "@/components/notifications/NotificationPanel";
+import { CartIconBadge } from "@/components/pharmacy/CartIconBadge";
 import { clearAccessToken, clearAuthSessionCookie } from "@/lib/auth";
 
 interface TopBarProps {
   userName: string;
   userRole: string;
+  userId?: number | null;
   onToggleSidebar: () => void;
   onLogout?: () => void | Promise<void>;
 }
@@ -32,7 +34,7 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function TopBar({ userName, userRole, onToggleSidebar, onLogout }: TopBarProps) {
+export function TopBar({ userName, userRole, userId = null, onToggleSidebar, onLogout }: TopBarProps) {
   const router = useRouter();
 
   async function handleSignOut() {
@@ -71,6 +73,9 @@ export function TopBar({ userName, userRole, onToggleSidebar, onLogout }: TopBar
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Pharmacy cart badge (patient only) */}
+      {userRole === "patient" && <CartIconBadge userId={userId} />}
 
       {/* Notification panel */}
       <NotificationPanel />
