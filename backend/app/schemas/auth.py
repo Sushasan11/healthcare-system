@@ -1,4 +1,5 @@
 import re
+from datetime import date
 
 from pydantic import BaseModel, EmailStr, field_validator
 
@@ -23,7 +24,7 @@ class PatientRegisterRequest(BaseModel):
     password: str
     full_name: str
     phone: str | None = None
-    date_of_birth: str | None = None
+    date_of_birth: date | None = None
     gender: str | None = None
     address: str | None = None
     emergency_contact: str | None = None
